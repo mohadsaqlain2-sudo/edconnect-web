@@ -509,37 +509,70 @@ deployment also:
 
 ## 13. Post-deploy checklist
 
+### Server side
+
 ```bash
-php artisan about
-php artisan migrate:status
-php artisan route:list | head
+php artisan about                     # env, cache, drivers
+php artisan migrate:status            # every migration "Ran?"
+php artisan schedule:list             # both commands present
+php artisan route:list | head         # app boots with cached routes
+php artisan queue:monitor database:default --max=100
 ```
 
-Then verify in a browser:
+```bash
+# caches were built, not stale
+ls bootstrap/cache/config.php bootstrap/cache/routes-v7.php
+# uploads are reachable
+curl -I https://educonnect.example.com/storage/README.md 2>/dev/null || true
+# health endpoint
+curl -fsS https://educonnect.example.com/up && echo OK
+# security headers
+curl -sI https://educonnect.example.com/ | grep -Ei 'x-frame|x-content|referrer|permissions'
+# TLS expiry (renewal is automatic, but confirm the timer)
+sudo certbot certificates | grep -E 'Certificate Name|Expiry'
+sudo systemctl list-timers | grep certbot
+```
 
-1. `https://educonnect.example.com` loads over HTTPS.
-2. Register a student and a teacher; both reach their own dashboard.
-3. Log in with the admin account, open **Users**, **Posts**, **Classes** and
-   **Reports**.
-4. Create a class as a teacher and join it as an enrolled student.
-5. Report a post as a student and moderate it as the admin.
-6. Request a password reset and confirm the email arrives.
+### Browser walkthrough
 
-Run the automated suite once on the server (or in CI) before going live:
+1. `https://educonnect.example.com` loads over HTTPS; the landing page shows the
+   hero, features and CTAs; the padlock has no warnings.
+2. Register a student **and** a teacher; both reach their own dashboard and the
+   role badge is correct.
+3. Log in with the admin account and open **Users**, **Posts**, **Classes**,
+   **Reports** and the **style guide**.
+4. Create a class as a teacher, enrol as a student, start the class and join the
+   Jitsi room from two browsers (camera/microphone prompt appears only there).
+5. Report a post as a student, then hide it, block the author and dismiss another
+   report as the admin; confirm each action lands in the queue with the right
+   status.
+6. Publish a post with an image; confirm it is resized (inspect the network tab)
+   and that a `.php` upload is rejected.
+7. Request a password reset and confirm the branded email arrives; reset the
+   password and log in with it.
+8. Set the browser to 360 px and 768 px: the mobile nav, feed and dashboard must
+   stay usable; toggle dark mode and check contrast.
+9. Trigger a "class starting soon" reminder and confirm the notification bell
+   updates (needs the scheduler + queue worker).
+10. Run the automated suite once on the server (or in CI):
 
 ```bash
 php artisan test
 ```
 
+Record the release (commit/tag, date, who deployed, test result) in your ops log.
+
 ---
 
 ## 14. Updates and rollback
+
+### Deploy a new release
 
 ```bash
 cd /var/www/educonnect
 php artisan down --retry=60
 
-# Take a backup first (see docs/BACKUP.md)
+# Always take a backup first (see docs/BACKUP.md).
 ./scripts/backup.sh
 
 git pull
@@ -547,22 +580,41 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
 php artisan optimize:clear && php artisan optimize
+php artisan queue:restart
 
 php artisan up
 ```
 
-If a release must be rolled back:
+Then re-run the post-deploy checklist. Keep the previous release tag and the
+backup file name in the ops log; that is the rollback path.
+
+### Roll back
 
 ```bash
+cd /var/www/educonnect
+php artisan down --retry=60
+
 git checkout <previous-tag>
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
-php artisan migrate:rollback --step=1 --force   # only the last batch
+
+# Only if the new release added migrations that are safe to reverse:
+php artisan migrate:rollback --step=1 --force
+
 php artisan optimize:clear && php artisan optimize
+php artisan queue:restart
+php artisan up
 ```
 
-Restore the database from the backup that was taken before the deploy when a
-migration cannot be rolled back safely.
+If the migration cannot be reversed safely, stop and restore the database from
+the backup taken before the deploy (`docs/BACKUP.md` §Restore). Do not try to
+"fix forward" on a live database without a backup.
+
+### Deploy log template
+
+| Date | Release | Deployed by | Backup file | Tests | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 2026-10-31 | v1.0.0 |  | `educonnect_20261031_023000.tar.gz` | 264 passed | first production release |
 
 ---
 

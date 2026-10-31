@@ -31,6 +31,11 @@
         \App\Models\User::ROLE_TEACHER => 'primary',
         default => 'success',
     };
+
+    // Intrinsic image size (cached) so the card reserves its height before the
+    // photo loads. The upload service already caps post images at 1600px.
+    $imageDimensions = $post->imageDimensions();
+    $imageUrl = $post->image ? \Illuminate\Support\Facades\Storage::disk('public')->url($post->image) : null;
 @endphp
 
 <article class="card edu-card" data-post-card="{{ $post->id }}">
@@ -108,7 +113,13 @@
         <p class="post-body mb-2">{!! $hashtagService->linkify($post->body) !!}</p>
 
         @if ($post->image)
-            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($post->image) }}"
+            <img src="{{ $imageUrl }}"
+                 @if ($imageDimensions)
+                     width="{{ $imageDimensions['width'] }}"
+                     height="{{ $imageDimensions['height'] }}"
+                     srcset="{{ $imageUrl }} {{ $imageDimensions['width'] }}w"
+                     sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 60vw, 720px"
+                 @endif
                  alt="{{ __('Image attached to the post') }}"
                  class="img-fluid rounded-3 mb-2 edu-post-image"
                  loading="lazy" decoding="async">

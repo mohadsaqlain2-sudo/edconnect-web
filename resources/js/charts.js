@@ -10,9 +10,36 @@
  *  - line charts get a soft vertical gradient
  *  - a range <select> can reload a series through a JSON endpoint
  *  - a skeleton is shown while that request is running
+ *
+ * Phase 3D: Chart.js is loaded with a dynamic import, and only when the page
+ * actually contains a <canvas data-chart>. Pages without charts (the landing
+ * page, auth, the feed, most admin screens) never download the library.
  */
 
-import Chart from 'chart.js/auto';
+/** Chart.js constructor, resolved on first use. */
+let Chart = null;
+
+/** Shared promise so several boot calls cannot start parallel downloads. */
+let chartLoader = null;
+
+/**
+ * Load chart.js/auto once. The bundler emits it as a separate chunk.
+ */
+function loadChartJs() {
+    if (Chart) {
+        return Promise.resolve(Chart);
+    }
+
+    if (! chartLoader) {
+        chartLoader = import('chart.js/auto').then((module) => {
+            Chart = module.default;
+
+            return Chart;
+        });
+    }
+
+    return chartLoader;
+}
 
 /** Canvas element -> Chart instance. */
 const registry = new Map();
@@ -147,6 +174,10 @@ function renderCanvas(canvas) {
         return registry.get(canvas);
     }
 
+    if (! Chart) {
+        return null;
+    }
+
     const config = parseCanvasConfig(canvas);
     if (!config) {
         return null;
@@ -275,10 +306,51 @@ function watchTheme() {
     });
 }
 
-function bootCharts() {
+/**
+ * Redraw every chart after the viewport changes shape.
+ *
+ * Chart.js already watches its container, but orientation changes, the
+ * on-screen keyboard and the collapsing desktop sidebar can all settle one
+ * frame late. One rAF coalesces the burst of resize events.
+ */
+function watchViewport() {
+    let frame = null;
+
+    const resize = () => {
+        if (frame !== null) {
+            return;
+        }
+
+        frame = window.requestAnimationFrame(() => {
+            frame = null;
+            registry.forEach((chart) => chart.resize());
+        });
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+    document.addEventListener('edu:sidebar-toggled', resize);
+    document.addEventListener('edu:theme-changed', resize);
+}
+
+async function bootCharts() {
+    // No canvas, no download: this is the biggest mobile win of Phase 3D.
+    if (! document.querySelector('canvas[data-chart]')) {
+        return;
+    }
+
+    try {
+        await loadChartJs();
+    } catch (error) {
+        console.error('[EduConnect] Chart.js could not be loaded', error);
+
+        return;
+    }
+
     renderAllCharts();
     bindRangeSelectors();
     watchTheme();
+    watchViewport();
 }
 
 window.EduCharts = {

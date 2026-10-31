@@ -4,7 +4,7 @@
 @props(['paginator'])
 
 @if ($paginator->hasPages())
-    <nav class="mt-3 d-flex justify-content-center" aria-label="{{ __('Page navigation') }}">
+    <nav class="edu-pagination mt-3 d-flex justify-content-center" aria-label="{{ __('Page navigation') }}">
         {{ $paginator->links() }}
     </nav>
 @endif

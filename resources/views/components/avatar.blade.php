@@ -18,6 +18,15 @@
         'xl' => 'avatar-xl',
     ][$size] ?? 'avatar';
 
+    // Intrinsic size of each class, so the browser reserves the square before
+    // the photo downloads (no layout shift / CLS).
+    $dimensions = [
+        'sm' => 32,
+        'md' => 40,
+        'lg' => 96,
+        'xl' => 128,
+    ][$size] ?? 40;
+
     $name = $user?->name ?? __('User');
 
     // Two initials at most: "Ada Lovelace" -> "AL", "Ada" -> "A".
@@ -36,6 +45,7 @@
     <a href="{{ $link }}" class="d-inline-flex flex-shrink-0" aria-label="{{ $name }}">
         @if ($photo)
             <img src="{{ $photo }}" alt="{{ $name }}" loading="lazy" decoding="async"
+                 width="{{ $dimensions }}" height="{{ $dimensions }}"
                  {{ $attributes->class([$sizeClass]) }}>
         @else
             <span role="img" aria-label="{{ $name }}"
@@ -44,6 +54,7 @@
     </a>
 @elseif ($photo)
     <img src="{{ $photo }}" alt="{{ $name }}" loading="lazy" decoding="async"
+         width="{{ $dimensions }}" height="{{ $dimensions }}"
          {{ $attributes->class([$sizeClass]) }}>
 @else
     <span role="img" aria-label="{{ $name }}"

@@ -1,0 +1,740 @@
+// -----------------------------------------------------------------------------
+// Phase 3D — responsive layer (320px → 2560px, portrait + landscape)
+// -----------------------------------------------------------------------------
+// Everything here is mobile-first or a small, targeted correction on top of
+// the existing Bootstrap 5 / Phase 3B / 3C styles. The file is imported last
+// so it can safely adjust component rules without rewriting them.
+//
+// Breakpoints follow Bootstrap 5 exactly:
+//   xs  0          phones (320, 360, 375, 390, 430)
+//   sm  576px      large phones / small foldables
+//   md  768px      tablets portrait
+//   lg  992px      tablets landscape / small laptops
+//   xl  1200px     laptops
+//   xxl 1400px     desktops
+// No custom breakpoint is introduced. Safe-area insets, pointer media
+// queries and the 359.98px guard are device capabilities, not breakpoints.
+// -----------------------------------------------------------------------------
+
+:root {
+    --edu-safe-top: env(safe-area-inset-top, 0px);
+    --edu-safe-right: env(safe-area-inset-right, 0px);
+    --edu-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --edu-safe-left: env(safe-area-inset-left, 0px);
+    // Height of the phone bottom bar, including the home indicator.
+    --edu-mobile-nav-height: calc(56px + var(--edu-safe-bottom));
+}
+
+// -----------------------------------------------------------------------------
+// 1. Global foundations
+// -----------------------------------------------------------------------------
+
+html {
+    // Safari on iOS otherwise enlarges text in landscape.
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    // The sticky navbar is part of the flow; anchor jumps must clear it.
+    scroll-padding-top: calc(var(--edu-navbar-height) + var(--edu-space-3));
+}
+
+body {
+    // `clip` is the modern value; `hidden` stays as the fallback (set in app.scss).
+    overflow-x: hidden;
+    overflow-x: clip;
+    // A long email, URL or hashtag must never widen the page.
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+// Media never overflows its column and never distorts.
+img,
+video {
+    max-width: 100%;
+    height: auto;
+}
+
+svg,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+// Intrinsic dimensions (width/height attributes) reserve the box, so lazy
+// images do not push the page around while they load.
+img[width][height] {
+    height: auto;
+}
+
+// Never let a flex/grid child force its parent wider than the viewport.
+.edu-main,
+.edu-main-inner,
+.edu-shell,
+.container,
+.container-fluid,
+.container-sm,
+.container-md,
+.container-lg,
+.container-xl,
+.container-xxl {
+    min-width: 0;
+}
+
+// Long user-generated strings (names, emails, post bodies, comments).
+.post-body,
+.edu-post-body,
+.comment-body,
+.edu-comment-body,
+.notification-body,
+.edu-notification-body,
+.edu-hashtag,
+.edu-mention,
+.dropdown-item,
+.list-group-item,
+td,
+th {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+// The shell uses dynamic viewport units so the address bar of a phone does
+// not crop the bottom of the page (100vh fallback first).
+.edu-body {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.edu-shell {
+    min-height: calc(100vh - var(--edu-navbar-height));
+    min-height: calc(100dvh - var(--edu-navbar-height));
+}
+
+// Auth pages: the branded panel and the form are a full dynamic viewport.
+.edu-auth-body main,
+.edu-auth-body .min-vh-100 {
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+}
+
+// Notches and rounded corners: the navbar, the page and the bottom bar all
+// add the safe-area inset on top of their own padding.
+.edu-navbar {
+    padding-top: calc(0.55rem + var(--edu-safe-top));
+    padding-left: max(var(--edu-safe-left), 0px);
+    padding-right: max(var(--edu-safe-right), 0px);
+}
+
+.edu-main-inner {
+    padding-left: var(--edu-safe-left);
+    padding-right: var(--edu-safe-right);
+}
+
+.edu-auth-body main {
+    padding-left: var(--edu-safe-left);
+    padding-right: var(--edu-safe-right);
+}
+
+// Keyboard focus stays visible on every interactive element, in both themes.
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+.page-link:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--edu-primary) 70%, transparent);
+    outline-offset: 2px;
+}
+
+// -----------------------------------------------------------------------------
+// 2. Touch targets and form ergonomics
+// -----------------------------------------------------------------------------
+
+// Every icon button is at least 44 × 44 (the Phase 3C value was 42px).
+.edu-icon-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+}
+
+// Coarse pointers (phones, tablets, touch laptops) get comfortable targets
+// even when the visual style is "small".
+@media (pointer: coarse) {
+    .btn,
+    .btn-sm,
+    .nav-link,
+    .dropdown-item,
+    .list-group-item-action,
+    .page-link,
+    .edu-filter-chip,
+    .edu-mobile-nav-item,
+    .password-toggle {
+        min-height: 44px;
+    }
+
+    .btn-sm {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .form-check-input {
+        width: 1.35em;
+        height: 1.35em;
+        margin-top: 0.2em;
+    }
+
+    // Dropdown items are tap targets, not desktop menu rows.
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+    }
+
+    // Hover elevation is decoration only; touch users must not depend on it.
+    .edu-feature-card:hover,
+    .edu-card-hover:hover {
+        transform: none;
+    }
+}
+
+// iOS zooms the whole page when a focused input is smaller than 16px.
+// This applies to phones and tablets, exactly where that behaviour exists.
+@media (max-width: 991.98px), (pointer: coarse) {
+    .form-control,
+    .form-select,
+    .form-control-sm,
+    .form-select-sm,
+    .input-group > .form-control,
+    .input-group > .form-select,
+    textarea.form-control {
+        font-size: 16px;
+    }
+
+    // Keep focused fields clear of sticky bars and the on-screen keyboard.
+    .form-control,
+    .form-select,
+    textarea {
+        scroll-margin-top: calc(var(--edu-navbar-height) + 1rem);
+        scroll-margin-bottom: calc(var(--edu-mobile-nav-height) + 6rem);
+    }
+}
+
+// Hover-only affordances also get a keyboard/tap equivalent.
+@media (hover: none) {
+    .edu-feature-card:hover,
+    .edu-card-hover:hover,
+    .edu-sidebar .nav-link:hover {
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 3. Navbar: expandable phone search
+// -----------------------------------------------------------------------------
+
+.edu-search-mobile {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1039;
+    padding: var(--edu-space-2) 0 var(--edu-space-3);
+    background: color-mix(in srgb, var(--edu-surface) 96%, transparent);
+    border-bottom: 1px solid var(--edu-border);
+    box-shadow: var(--edu-shadow-pop);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.edu-search-mobile-form {
+    width: 100%;
+}
+
+.edu-search-mobile .form-control {
+    font-size: 16px;
+    min-height: 46px;
+}
+
+// The dark navbar is only 72px tall; on phones the page title truncates
+// before the action buttons so nothing is pushed off-screen.
+@media (max-width: 767.98px) {
+    .edu-navbar-title {
+        max-width: 11rem;
+        font-size: 0.9rem;
+    }
+
+    .edu-navbar .breadcrumb {
+        font-size: 0.66rem;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 4. Sidebar, bottom navigation and offcanvas
+// -----------------------------------------------------------------------------
+
+@media (max-width: 991.98px) {
+    .edu-sidebar {
+        // Never wider than the phone, with a comfortable close area.
+        --bs-offcanvas-width: min(88vw, 320px);
+        padding-top: var(--edu-safe-top);
+        padding-bottom: var(--edu-safe-bottom);
+    }
+
+    // The drawer must close after tapping a link (handled in layout.js too).
+    .edu-sidebar .nav-link {
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+.edu-mobile-nav {
+    // The bar already has 56px rows; add the home indicator below them.
+    padding-bottom: var(--edu-safe-bottom);
+    padding-left: var(--edu-safe-left);
+    padding-right: var(--edu-safe-right);
+}
+
+.edu-mobile-nav-item {
+    min-height: 56px;
+    min-width: 44px;
+    touch-action: manipulation;
+}
+
+.edu-has-mobile-nav {
+    padding-bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+}
+
+// -----------------------------------------------------------------------------
+// 5. Content grids: feed, dashboards, cards
+// -----------------------------------------------------------------------------
+
+// The feed is one column on phones, feed + widgets on tablets, and the
+// desktop three-column experience is sidebar + feed + widgets.
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .edu-feed-row > .col-md-8 {
+        flex: 0 0 auto;
+        width: 58.33333333%;
+    }
+
+    .edu-feed-row > .col-md-4 {
+        flex: 0 0 auto;
+        width: 41.66666667%;
+    }
+}
+
+// Swipeable horizontal strips (cards, avatars, chips) with scroll snapping.
+.edu-scroll-x {
+    display: flex;
+    gap: var(--edu-space-3);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: var(--edu-space-2);
+
+    > * {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+    }
+}
+
+// Chart cards can never force the grid wider than the viewport.
+.edu-chart-card {
+    overflow: hidden;
+
+    .card-body {
+        min-width: 0;
+    }
+
+    canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}
+
+// Tables: readable horizontal scrolling when a table is not converted to
+// cards (all admin tables already use .edu-table-cards below 992px).
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+// Compact pagination: Prev, current page and Next on phones. Laravel's
+// Bootstrap 5 view renders the numeric pages in the middle of the list.
+@media (max-width: 575.98px) {
+    .edu-pagination .pagination {
+        flex-wrap: nowrap;
+        gap: 0.25rem;
+        --bs-pagination-padding-x: 0.65rem;
+        --bs-pagination-font-size: 0.8125rem;
+    }
+
+    .edu-pagination .page-item:not(.active):not(:first-child):not(:last-child) {
+        display: none;
+    }
+
+    .edu-pagination .page-link {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 6. Forms: single column on phones, sticky action bar
+// -----------------------------------------------------------------------------
+
+@media (max-width: 767.98px) {
+    .edu-form-actions {
+        position: sticky;
+        bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+        z-index: var(--edu-z-sticky);
+        margin: var(--edu-space-4) -0.25rem -0.25rem;
+        padding: var(--edu-space-3);
+        border: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius-sm);
+        background: color-mix(in srgb, var(--edu-surface) 94%, transparent);
+        box-shadow: var(--edu-shadow-pop);
+        backdrop-filter: saturate(180%) blur(14px);
+        -webkit-backdrop-filter: saturate(180%) blur(14px);
+
+        // The buttons share the bar instead of stacking into a tall tower.
+        .btn {
+            flex: 1 1 auto;
+        }
+    }
+}
+
+// Long forms keep two columns from lg upwards; below that they are single
+// column already (Bootstrap .row + .col-12). This is the explicit guarantee.
+@media (max-width: 991.98px) {
+    .edu-form-grid > [class*='col-'] {
+        width: 100%;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 7. Modals
+// -----------------------------------------------------------------------------
+
+.modal {
+    // Never taller than the dynamic viewport; the body scrolls instead.
+    padding-right: var(--edu-safe-right);
+    padding-left: var(--edu-safe-left);
+}
+
+.modal .modal-content {
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+}
+
+.modal .modal-dialog-scrollable .modal-content {
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+}
+
+@media (max-width: 575.98px) {
+    .modal .modal-content {
+        border-radius: 0;
+    }
+
+    // Fullscreen on phones (the component adds modal-fullscreen-sm-down).
+    .modal-fullscreen-sm-down .modal-content {
+        min-height: 100vh;
+        min-height: 100dvh;
+        border-radius: 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 8. Live class room (Jitsi)
+// -----------------------------------------------------------------------------
+
+.jitsi-frame {
+    // 100vh first for older browsers, then the dynamic unit.
+    height: calc(100vh - 340px);
+    height: calc(100dvh - 340px);
+    min-height: 420px;
+}
+
+@media (max-width: 991.98px) {
+    .jitsi-frame {
+        height: calc(100vh - 260px);
+        height: calc(100dvh - 260px);
+        min-height: 360px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .jitsi-frame {
+        height: calc(100vh - 250px);
+        height: calc(100dvh - 250px);
+        min-height: 320px;
+        border-radius: var(--edu-radius-sm);
+    }
+}
+
+// Landscape phone: the top bar + navbar leave roughly 260px of usable
+// height, so the video keeps the remaining space and never forces a scroll.
+@media (orientation: landscape) and (max-height: 520px) {
+    :root {
+        --edu-navbar-height: 56px;
+    }
+
+    .edu-navbar {
+        min-height: 56px;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .jitsi-frame {
+        height: calc(100vh - 150px);
+        height: calc(100dvh - 150px);
+        min-height: 220px;
+    }
+
+    .edu-mobile-nav {
+        display: none;
+    }
+
+    .edu-has-mobile-nav {
+        padding-bottom: 0;
+    }
+
+    .edu-landing-hero {
+        padding: var(--edu-space-5) 0;
+    }
+}
+
+// The room top bar stays reachable while scrolling the video on tablets and
+// phones, so "Back to the class" / info / status are never out of sight.
+@media (max-width: 991.98px) {
+    .edu-room-bar {
+        position: sticky;
+        top: calc(var(--edu-navbar-height) + 0.25rem);
+        z-index: 1018;
+    }
+}
+
+// Room information becomes a bottom sheet on phones and tablets portrait.
+@media (max-width: 991.98px) {
+    .edu-room-sheet {
+        position: fixed;
+        inset: auto 0 0 0;
+        z-index: calc(var(--edu-z-mobilenav) - 1);
+        max-height: 75vh;
+        max-height: 75dvh;
+        margin: 0 !important;
+        padding: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        background: var(--edu-surface);
+        border-top: 1px solid var(--edu-border);
+        border-radius: var(--edu-radius-lg) var(--edu-radius-lg) 0 0;
+        box-shadow: 0 -20px 45px -20px rgba(15, 23, 42, 0.45);
+        padding-bottom: var(--edu-safe-bottom);
+
+        > .row {
+            padding: 0 var(--edu-space-3) var(--edu-space-3);
+        }
+
+        // When Bootstrap's collapse hides it, keep it hidden (no display:flex).
+        &.collapse:not(.show) {
+            display: none;
+        }
+    }
+
+    .edu-room-sheet-head {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--edu-space-2);
+        padding: var(--edu-space-2) var(--edu-space-3);
+        background: var(--edu-surface);
+        border-bottom: 1px solid var(--edu-border);
+        z-index: 1;
+    }
+
+    .edu-room-sheet-handle {
+        width: 42px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--edu-border-strong);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 9. Landing page at 320px
+// -----------------------------------------------------------------------------
+
+@media (max-width: 575.98px) {
+    .edu-landing-hero {
+        padding: var(--edu-space-6) 0 var(--edu-space-5);
+    }
+
+    .edu-landing-title {
+        font-size: clamp(1.75rem, 1.4rem + 2vw, 2.25rem);
+        letter-spacing: -0.02em;
+    }
+
+    .edu-landing .btn-lg {
+        width: 100%;
+        white-space: normal;
+    }
+
+    .edu-landing-shape.is-one {
+        width: 240px;
+        height: 240px;
+        top: -120px;
+        right: -100px;
+    }
+
+    .edu-landing-shape.is-two {
+        width: 220px;
+        height: 220px;
+        bottom: -140px;
+        left: -100px;
+    }
+
+    .edu-stats-strip {
+        padding: var(--edu-space-5) var(--edu-space-3);
+        border-radius: var(--edu-radius-sm);
+    }
+
+    .edu-landing-section {
+        padding: var(--edu-space-5) 0;
+    }
+}
+
+// 320px is the narrowest target. Cards, stats and the auth card lose their
+// largest padding so content still fits with a comfortable 12px gutter.
+@media (max-width: 359.98px) {
+    :root {
+        --edu-navbar-height: 64px;
+    }
+
+    .container,
+    .container-fluid,
+    .container-sm,
+    .container-md,
+    .container-lg,
+    .container-xl,
+    .container-xxl {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .card-body {
+        padding: 0.875rem;
+    }
+
+    .edu-auth-card .card-body {
+        padding: 1rem;
+    }
+
+    .edu-stat-card .card-body {
+        min-height: 112px;
+        padding: 0.875rem;
+    }
+
+    .edu-landing-title {
+        font-size: 1.7rem;
+    }
+
+    .edu-mobile-nav-item {
+        font-size: 0.65rem;
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
+
+        i {
+            font-size: 1.1rem;
+        }
+    }
+
+    .edu-navbar-title {
+        max-width: 8.5rem;
+    }
+
+    .edu-search {
+        width: 100%;
+    }
+
+    .edu-countdown-unit {
+        min-width: 44px;
+        padding: 0.3rem;
+    }
+
+    .edu-countdown-value {
+        font-size: 1rem;
+    }
+
+    // Long action rows wrap instead of overflowing.
+    .edu-post-actions,
+    .d-flex.flex-wrap {
+        min-width: 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 10. Ultra-wide (1920 / 2560): keep content centred and readable
+// -----------------------------------------------------------------------------
+
+// Bootstrap already caps .container-xxl at 1320px. Custom sections that use a
+// full-width flex row get the same cap so 2560px screens do not stretch text.
+@media (min-width: 1920px) {
+    .edu-main-inner > .container-fluid,
+    .edu-main-inner > .container-xxl {
+        max-width: 1600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .edu-landing-hero .container-xxl,
+    .edu-landing-section .container-xxl {
+        max-width: 1440px;
+    }
+
+    .edu-sidebar {
+        --edu-sidebar-width: 284px;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 11. Preferences
+// -----------------------------------------------------------------------------
+
+// The single reduced-motion switch lives in app.scss (Phase 3C). This adds the
+// scroll-snap container, which would otherwise stay mandatory.
+@media (prefers-reduced-motion: reduce) {
+    .edu-scroll-x {
+        scroll-snap-type: none;
+        scroll-behavior: auto;
+    }
+}
+
+// Dark mode is driven by data-bs-theme; make sure form controls that browsers
+// paint natively (date/time pickers, search cancel button) follow it.
+[data-bs-theme='dark'] {
+    color-scheme: dark;
+
+    input[type='date'],
+    input[type='time'],
+    input[type='datetime-local'],
+    input[type='month'],
+    input[type='week'] {
+        color-scheme: dark;
+    }
+}
+
+[data-bs-theme='light'] {
+    color-scheme: light;
+}

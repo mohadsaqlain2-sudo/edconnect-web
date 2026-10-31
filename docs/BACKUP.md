@@ -158,6 +158,49 @@ the deployment guide covers the application, Nginx, Apache and worker logs.
 - [ ] Monthly restore into a scratch database (next section)
 - [ ] Retention deletes old archives as expected (`RETENTION_DAYS`)
 
+### Integrity and disk checks
+
+Run these after a deploy or when changing the backup destination:
+
+```bash
+# Every archive opens and contains the expected members.
+for f in /var/backups/educonnect/*.tar.gz; do
+  if tar -tzf "$f" >/dev/null 2>&1; then echo "OK  $f"; else echo "BAD $f"; fi
+done
+
+# Enough room for at least two more archives (a full disk truncates the dump).
+df -h /var/backups/educonnect
+
+# Size trend: a sudden drop is a truncated dump, a sudden jump is a schema leak.
+ls -lh --time-style=long-iso /var/backups/educonnect | tail -n 14
+```
+
+Send a copy off the machine after every successful run. The backup only protects
+you if the machine that failed is not the only place the archive exists:
+
+```bash
+# Example with rclone (configure the remote once with `rclone config`).
+rclone sync /var/backups/educonnect remote:educonnect-backups
+
+# Or with rsync over SSH.
+rsync -az --delete /var/backups/educonnect/ backup-host:/srv/backups/educonnect/
+```
+
+### What is intentionally not backed up
+
+- `storage/logs` — diagnostic, not data;
+- `storage/framework` — caches and compiled views, rebuilt on deploy;
+- `vendor/` and `node_modules/` — rebuilt from the lock files;
+- the Jitsi server volumes — see the end of this document.
+
+`storage/app/backups` (the `backup:database` dumps) is inside `storage/app` and
+therefore included in the shell archive; do not let the two jobs fill the disk.
+The Laravel command keeps the newest `--keep` files (14 by default):
+
+```bash
+php artisan backup:database --keep=14
+```
+
 ---
 
 ## Restore

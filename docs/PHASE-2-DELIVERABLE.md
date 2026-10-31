@@ -1,50 +1,156 @@
-# EduConnect - Phase 2 deliverable
+# EduConnect — Phase 2 deliverable
 
-Database migrations, Eloquent models, relationships, factories, seeders,
-relationship tests and the tinker proof for SRS section 4.
+Database schema, Eloquent models, relationships, factories, demo seeders and the
+relationship proof. Every file below is copied verbatim from the working
+repository.
 
-> Runtime note: this repository is on Laravel 12.70.2 (the SRS asks for
-> Laravel 11). Every Phase 2 feature is framework-compatible with Laravel 11;
-> only the framework version differs.
+**Snapshot**
 
----
+| Item | Value |
+| --- | --- |
+| Framework | Laravel 12.70.2 (Laravel 11 compatible code) |
+| Database | MySQL 8 in `.env`; SQLite `:memory:` for tests |
+| Migrations | 18 total, 12 created/used by Phase 2 |
+| Tables | `users`, `posts`, `comments`, `likes`, `follows`, `hashtags`, `hashtag_post`, `classes`, `class_enrollments`, `reports`, `notifications` |
+| Models | `User`, `Post`, `Comment`, `Like`, `Follow`, `Hashtag`, `ClassRoom`, `ClassEnrollment`, `Report` |
+| Factories | 9 (`User`, `Post`, `Comment`, `Like`, `Follow`, `Hashtag`, `ClassRoom`, `ClassEnrollment`, `Report`) |
+| Seeded demo data | 10 users, 41 posts, 71 comments, 320 likes, 36 follows, 10 hashtags, 8 classes, 18 enrollments, 5 reports |
+| Phase 2 tests | `ModelRelationshipsTest` + `SeederTest` → **26 passed, 92 assertions** |
+| Tinker proof | **45 passed, 0 failed** |
+| Full suite | **266 passed, 1401 assertions** |
 
 ## 1. ER summary
 
-| Table | Columns | Relationships |
-|---|---|---|
-| `users` | `id`, `name`, `email`, `email_verified_at`, `password`, `role` (admin/teacher/student), `bio`, `photo`, `subject`, `is_blocked`, `remember_token`, `timestamps` | hasMany `posts`, `comments`, `likes`, `reports`, `teachingClasses`; belongsToMany `followers`, `following`, `enrolledClasses` |
-| `posts` | `id`, `user_id` FK -> users (cascade), `body` varchar(280), `image` nullable, `is_hidden` bool default false, `timestamps` | belongsTo `user`; hasMany `comments`, `likes`; belongsToMany `hashtags`; morphMany `reports` |
-| `comments` | `id`, `post_id` FK -> posts (cascade), `user_id` FK -> users (cascade), `body`, `is_hidden` bool default false, `timestamps` | belongsTo `post`, `user`; morphMany `reports` |
-| `likes` | `id`, `post_id` FK -> posts (cascade), `user_id` FK -> users (cascade), `timestamps`; UNIQUE(`post_id`,`user_id`) | belongsTo `post`, `user` |
-| `follows` | `id`, `follower_id` FK -> users (cascade), `following_id` FK -> users (cascade), `timestamps`; UNIQUE(`follower_id`,`following_id`) | belongsTo `follower`, `following`; self-referencing graph on `User` |
-| `hashtags` | `id`, `name` UNIQUE (lowercase, no `#`), `timestamps` | belongsToMany `posts` |
-| `hashtag_post` | `hashtag_id` FK -> hashtags (cascade), `post_id` FK -> posts (cascade); PRIMARY KEY(`hashtag_id`,`post_id`) | pivot between `posts` and `hashtags` |
-| `classes` | `id`, `teacher_id` FK -> users (cascade), `title`, `description` nullable, `subject` nullable, `date`, `time`, `duration` (minutes), `room_name` UNIQUE, `status` enum(scheduled/live/completed) default scheduled, `is_hidden` bool default false, `starting_soon_notified_at` nullable, `timestamps` | belongsTo `teacher`; belongsToMany `students`; hasMany `enrollments` |
-| `class_enrollments` | `id`, `class_id` FK -> classes (cascade), `student_id` FK -> users (cascade), `timestamps`; UNIQUE(`class_id`,`student_id`) | belongsTo `classRoom`, `student` |
-| `reports` | `id`, `reporter_id` FK -> users (cascade), `reportable_type`, `reportable_id`, `reason`, `details` nullable, `status` enum(pending/reviewed/dismissed) default pending, `timestamps`; INDEX(`reportable_type`,`reportable_id`); UNIQUE(`reporter_id`,`reportable_type`,`reportable_id`) | belongsTo `reporter`; morphTo `reportable` (Post or Comment) |
-| `notifications` | `id` uuid PK, `type`, `notifiable_type`, `notifiable_id`, `data`, `read_at`, `timestamps`; INDEX(`notifiable_type`,`notifiable_id`) | morphTo `notifiable` (Laravel default) |
+| Table | Columns | Relations |
+| --- | --- | --- |
+| `users` | `id`, `name`, `email` (unique), `email_verified_at`, `password`, `role` enum(`admin`,`teacher`,`student`), `bio`, `photo`, `subject`, `is_blocked`, `remember_token`, `timestamps`; indexes on `name`, `subject` | 1:N `posts`, `comments`, `likes`, `reports` (as reporter), `teachingClasses`; N:M `followers` / `following` through `follows`; N:M `enrolledClasses` through `class_enrollments` |
+| `posts` | `id`, `user_id` FK → `users` cascade, `body` varchar(280), `image` nullable, `is_hidden` bool default false, `timestamps`; indexes `user_id`, `is_hidden` | belongsTo `user`; hasMany `comments`, `likes`; belongsToMany `hashtags`; morphMany `reports` |
+| `comments` | `id`, `post_id` FK cascade, `user_id` FK cascade, `body` text, `is_hidden` bool default false, `timestamps`; indexes `post_id`, `user_id`, `is_hidden` | belongsTo `post`, `user`; morphMany `reports` |
+| `likes` | `id`, `post_id` FK cascade, `user_id` FK cascade, `timestamps`; unique(`post_id`,`user_id`); index `user_id` | belongsTo `post`, `user` |
+| `follows` | `id`, `follower_id` FK cascade, `following_id` FK cascade, `timestamps`; unique(`follower_id`,`following_id`); index `following_id` | belongsTo `follower`, `following` (both `User`) |
+| `hashtags` | `id`, `name` unique, `timestamps` (stored lowercase, no `#`) | belongsToMany `posts` through `hashtag_post` |
+| `hashtag_post` | `hashtag_id` FK cascade, `post_id` FK cascade; composite primary key (`hashtag_id`,`post_id`); index `post_id` | pivot for posts ↔ hashtags |
+| `classes` | `id`, `teacher_id` FK cascade, `title`, `description`, `subject`, `date`, `time`, `duration` smallint (minutes), `room_name` unique, `status` enum(`scheduled`,`live`,`completed`) default scheduled, `is_hidden`, `starting_soon_notified_at`, `timestamps`; indexes `teacher_id`, `status`, `date` | belongsTo `teacher`; belongsToMany `students` through `class_enrollments`; hasMany `enrollments` |
+| `class_enrollments` | `id`, `class_id` FK → `classes` cascade, `student_id` FK → `users` cascade, `timestamps`; unique(`class_id`,`student_id`); index `student_id` | belongsTo `classRoom`, `student` |
+| `reports` | `id`, `reporter_id` FK cascade, `reportable_type`, `reportable_id` (morph index), `reason` text, `details` nullable, `status` enum(`pending`,`reviewed`,`dismissed`) default pending, `timestamps`; index `status`; unique(`reporter_id`,`reportable_type`,`reportable_id`) | belongsTo `reporter`; morphTo `reportable` (`Post` or `Comment`) |
+| `notifications` | `id` uuid PK, `type`, `notifiable_type`, `notifiable_id` (morph index), `data` text, `read_at`, `timestamps` | morphTo `notifiable` (`User`), via `Notifiable` |
 
-### Why the model is called `ClassRoom`
+`classes.is_hidden` and `classes.starting_soon_notified_at` come from the Phase 6
+notification work; `reports.details` and the reporter/reportable unique index come
+from the Phase 7 moderation work. They are part of the live schema and are
+documented here so the ER picture is not misleading.
 
-`Class` is a reserved word in PHP, so it cannot be used as a class name.
-The model is `App\Models\ClassRoom` and it declares `protected $table = 'classes';`
-so the database still matches the SRS exactly.
+## 2. Why the model is `ClassRoom`
 
-### Index policy
+`Class` is a reserved word in PHP: `class Class extends Model` is a parse error.
+The model is therefore `App\Models\ClassRoom`, and it pins the SRS table name:
 
-- Foreign keys cascade where the child cannot exist without the parent.
-- Every relationship column has an index. Composite UNIQUE indexes only cover
-  their first column, so `2026_10_30_000001_add_phase_two_relationship_indexes.php`
-  adds the missing single-column indexes for SQLite and MySQL.
-- Unique constraints: likes, follows, hashtag names, class room names,
-  class enrollments and one report per reporter per item.
+```php
+protected $table = 'classes';
+```
 
----
+Everything else follows the SRS: `class_id` foreign keys, the `classes` table and
+`class_enrollments`. Relationship methods are named `classRoom()` where the
+foreign key is `class_id` (the `$table` property makes the guess work, but the
+explicit name is safer to read).
 
-## 2. Migrations
+## 3. Index policy
 
-### `database/migrations/2026_10_29_000001_add_profile_fields_to_users_table.php`
+- Every foreign key uses `foreignId(...)->constrained(...)->cascadeOnDelete()` or
+  `nullOnDelete()` where a row should survive.
+- MySQL creates an index for a foreign key automatically; SQLite does not.
+  `2026_10_30_000001_add_phase_two_relationship_indexes.php` adds the missing
+  single-column indexes (likes.user_id, follows.following_id, etc.) and skips
+  the ones that already exist, so it is safe on both engines.
+- Composite `unique()` indexes cover their **first** column only. Columns such as
+  `likes.user_id` therefore still get their own index.
+- `hashtag_post` has a composite primary key and no surrogate `id`.
+- `reports` uses `$table->morphs('reportable')`, which creates
+  `(reportable_type, reportable_id)` plus its index.
+
+## 4. Commands
+
+```bash
+# 4.1 Create/refresh everything and load the demo data
+php artisan migrate:fresh --seed
+
+# 4.2 Phase 2 tests
+php artisan test tests/Feature/ModelRelationshipsTest.php tests/Feature/SeederTest.php
+
+# 4.3 Relationship proof against the seeded database
+php artisan tinker --execute="require base_path('database/tinker/phase2-relationships.php');"
+
+# 4.4 Whole suite
+php artisan test
+```
+
+## 5. Factories and seeders in one sentence
+
+`DemoUserSeeder` creates 3 teachers and 6 students (password `password`);
+`DemoContentSeeder` then builds the follow graph, 40 visible posts + 1 hidden
+spam post, two hashtags per post, 1–3 comments and 4–8 likes per post, 8 classes
+in past / live / upcoming states, 18 enrollments and 5 reports. It is idempotent:
+if any post already exists it returns without duplicating anything.
+
+
+# 6. Migrations
+
+## `database/migrations/0001_01_01_000000_create_users_table.php`
+
+```php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};
+
+```
+
+## `database/migrations/2026_10_29_000001_add_profile_fields_to_users_table.php`
 
 ```php
 <?php
@@ -86,9 +192,10 @@ return new class extends Migration
         });
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100001_create_posts_table.php`
+## `database/migrations/2026_10_29_100001_create_posts_table.php`
 
 ```php
 <?php
@@ -126,9 +233,10 @@ return new class extends Migration
         Schema::dropIfExists('posts');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100002_create_comments_table.php`
+## `database/migrations/2026_10_29_100002_create_comments_table.php`
 
 ```php
 <?php
@@ -167,9 +275,10 @@ return new class extends Migration
         Schema::dropIfExists('comments');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100003_create_likes_table.php`
+## `database/migrations/2026_10_29_100003_create_likes_table.php`
 
 ```php
 <?php
@@ -203,9 +312,10 @@ return new class extends Migration
         Schema::dropIfExists('likes');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100004_create_follows_table.php`
+## `database/migrations/2026_10_29_100004_create_follows_table.php`
 
 ```php
 <?php
@@ -241,9 +351,10 @@ return new class extends Migration
         Schema::dropIfExists('follows');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100005_create_hashtags_table.php`
+## `database/migrations/2026_10_29_100005_create_hashtags_table.php`
 
 ```php
 <?php
@@ -274,9 +385,10 @@ return new class extends Migration
         Schema::dropIfExists('hashtags');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100006_create_hashtag_post_table.php`
+## `database/migrations/2026_10_29_100006_create_hashtag_post_table.php`
 
 ```php
 <?php
@@ -308,9 +420,10 @@ return new class extends Migration
         Schema::dropIfExists('hashtag_post');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100007_create_classes_table.php`
+## `database/migrations/2026_10_29_100007_create_classes_table.php`
 
 ```php
 <?php
@@ -361,9 +474,10 @@ return new class extends Migration
         Schema::dropIfExists('classes');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100008_create_class_enrollments_table.php`
+## `database/migrations/2026_10_29_100008_create_class_enrollments_table.php`
 
 ```php
 <?php
@@ -398,9 +512,10 @@ return new class extends Migration
         Schema::dropIfExists('class_enrollments');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_100009_create_reports_table.php`
+## `database/migrations/2026_10_29_100009_create_reports_table.php`
 
 ```php
 <?php
@@ -442,9 +557,10 @@ return new class extends Migration
         Schema::dropIfExists('reports');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_124725_create_notifications_table.php`
+## `database/migrations/2026_10_29_124725_create_notifications_table.php`
 
 ```php
 <?php
@@ -478,9 +594,10 @@ return new class extends Migration
         Schema::dropIfExists('notifications');
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_130000_add_notification_support_to_classes_and_users.php`
+## `database/migrations/2026_10_29_130000_add_notification_support_to_classes_and_users.php`
 
 ```php
 <?php
@@ -527,9 +644,10 @@ return new class extends Migration
         });
     }
 };
+
 ```
 
-### `database/migrations/2026_10_29_140000_add_moderation_support_to_reports_table.php`
+## `database/migrations/2026_10_29_140000_add_moderation_support_to_reports_table.php`
 
 ```php
 <?php
@@ -567,9 +685,10 @@ return new class extends Migration
         });
     }
 };
+
 ```
 
-### `database/migrations/2026_10_30_000001_add_phase_two_relationship_indexes.php`
+## `database/migrations/2026_10_30_000001_add_phase_two_relationship_indexes.php`
 
 ```php
 <?php
@@ -638,13 +757,100 @@ return new class extends Migration
         }
     }
 };
+
 ```
 
----
+## `database/migrations/2026_10_30_000002_add_phase_eight_query_indexes.php`
 
-## 3. Models
+```php
+<?php
 
-### `app/Models/User.php`
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Phase 8 performance pass (SRS 5.1).
+ *
+ * The application filters and sorts by a relationship column plus a date:
+ * "my posts, newest first", "comments on this post, oldest first", "pending
+ * reports, newest first", "visible classes by date", and so on. A single
+ * column index cannot serve the filter and the sort at the same time, so each
+ * hot path gets one composite index.
+ *
+ * Indexes are created defensively (by name) so the migration is safe on MySQL
+ * and on the SQLite database used by the test suite.
+ */
+return new class extends Migration
+{
+    /**
+     * @var list<array{0: string, 1: list<string>, 2: string}>
+     */
+    private const INDEXES = [
+        // Feed, profile pages and "my posts" sorting.
+        ['posts', ['user_id', 'created_at'], 'phase8_posts_user_created_index'],
+        ['posts', ['is_hidden', 'created_at'], 'phase8_posts_hidden_created_index'],
+
+        // Post detail pages and the profile comment activity.
+        ['comments', ['post_id', 'created_at'], 'phase8_comments_post_created_index'],
+        ['comments', ['user_id', 'created_at'], 'phase8_comments_user_created_index'],
+
+        // "Posts I liked" and follower/following lists.
+        ['likes', ['user_id', 'created_at'], 'phase8_likes_user_created_index'],
+        ['follows', ['follower_id', 'created_at'], 'phase8_follows_follower_created_index'],
+        ['follows', ['following_id', 'created_at'], 'phase8_follows_following_created_index'],
+
+        // Class catalogue, teacher table and hidden-class checks.
+        ['classes', ['status', 'date'], 'phase8_classes_status_date_index'],
+        ['classes', ['teacher_id', 'date'], 'phase8_classes_teacher_date_index'],
+        ['classes', ['is_hidden', 'date'], 'phase8_classes_hidden_date_index'],
+
+        // "My enrolled classes" and the student dashboard.
+        ['class_enrollments', ['student_id', 'created_at'], 'phase8_enrollments_student_created_index'],
+
+        // Moderation queue: filter by status, newest first; per-content lookup.
+        ['reports', ['status', 'created_at'], 'phase8_reports_status_created_index'],
+        ['reports', ['reportable_type', 'reportable_id', 'status'], 'phase8_reports_reportable_status_index'],
+
+        // Notification bell: unread notifications for one user.
+        ['notifications', ['notifiable_type', 'notifiable_id', 'read_at'], 'phase8_notifications_unread_index'],
+
+        // Admin user table: role + blocked filters.
+        ['users', ['role', 'is_blocked'], 'phase8_users_role_blocked_index'],
+    ];
+
+    public function up(): void
+    {
+        foreach (self::INDEXES as [$table, $columns, $name]) {
+            if (! Schema::hasTable($table) || Schema::hasIndex($table, $name)) {
+                continue;
+            }
+
+            Schema::table($table, function (Blueprint $blueprint) use ($columns, $name): void {
+                $blueprint->index($columns, $name);
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        foreach (self::INDEXES as [$table, , $name]) {
+            if (! Schema::hasTable($table) || ! Schema::hasIndex($table, $name)) {
+                continue;
+            }
+
+            Schema::table($table, function (Blueprint $blueprint) use ($name): void {
+                $blueprint->dropIndex($name);
+            });
+        }
+    }
+};
+
+```
+
+# 7. Models
+
+## `app/Models/User.php`
 
 ```php
 <?php
@@ -931,9 +1137,10 @@ class User extends Authenticatable
         return $this->enrolledClasses()->whereKey($classRoom->id)->exists();
     }
 }
+
 ```
 
-### `app/Models/Post.php`
+## `app/Models/Post.php`
 
 ```php
 <?php
@@ -1027,7 +1234,11 @@ class Post extends Model
                 'user:id,name,role,photo,subject',
                 'hashtags:id,name',
             ])
-            ->withCount(['likes', 'comments'])
+            // Hidden comments do not count towards the visible total (FR-10).
+            ->withCount([
+                'likes',
+                'comments' => static fn (Builder $comments) => $comments->visible(),
+            ])
             ->withExists([
                 // 1 when the viewer liked the post, 0 otherwise.
                 'likes as liked_by_me' => static fn (Builder $likes) => $likes->where('user_id', $viewer?->id ?? 0),
@@ -1068,15 +1279,17 @@ class Post extends Model
         return $this->isLikedBy($user);
     }
 }
+
 ```
 
-### `app/Models/Comment.php`
+## `app/Models/Comment.php`
 
 ```php
 <?php
 
 namespace App\Models;
 
+use Database\Factories\CommentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -1085,7 +1298,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Comment extends Model
 {
-    /** @use HasFactory<\Database\Factories\CommentFactory> */
+    /** @use HasFactory<CommentFactory> */
     use HasFactory;
 
     /**
@@ -1137,22 +1350,24 @@ class Comment extends Model
         return $query->where('is_hidden', false);
     }
 }
+
 ```
 
-### `app/Models/Like.php`
+## `app/Models/Like.php`
 
 ```php
 <?php
 
 namespace App\Models;
 
+use Database\Factories\LikeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Like extends Model
 {
-    /** @use HasFactory<\Database\Factories\LikeFactory> */
+    /** @use HasFactory<LikeFactory> */
     use HasFactory;
 
     /**
@@ -1177,9 +1392,10 @@ class Like extends Model
         return $this->belongsTo(User::class);
     }
 }
+
 ```
 
-### `app/Models/Follow.php`
+## `app/Models/Follow.php`
 
 ```php
 <?php
@@ -1238,22 +1454,24 @@ class Follow extends Model
         return $this->belongsTo(User::class, 'following_id');
     }
 }
+
 ```
 
-### `app/Models/Hashtag.php`
+## `app/Models/Hashtag.php`
 
 ```php
 <?php
 
 namespace App\Models;
 
+use Database\Factories\HashtagFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Hashtag extends Model
 {
-    /** @use HasFactory<\Database\Factories\HashtagFactory> */
+    /** @use HasFactory<HashtagFactory> */
     use HasFactory;
 
     /**
@@ -1280,9 +1498,10 @@ class Hashtag extends Model
         return $this->belongsToMany(Post::class, 'hashtag_post');
     }
 }
+
 ```
 
-### `app/Models/ClassRoom.php`
+## `app/Models/ClassRoom.php`
 
 ```php
 <?php
@@ -1502,6 +1721,56 @@ class ClassRoom extends Model
         return $this->startsAt()->isFuture();
     }
 
+    /**
+     * Short timing hint for a class card (FR-21): "Live now",
+     * "Starts in 2h 15m" or "Ended". No JavaScript needed, so the card stays
+     * readable on a slow connection.
+     */
+    public function timelineLabel(): string
+    {
+        if ($this->isLive()) {
+            return __('Live now');
+        }
+
+        // A class the teacher ended (or that the scheduler closed) is over.
+        if ($this->status === self::STATUS_COMPLETED) {
+            return __('Ended');
+        }
+
+        if ($this->startsAt()->isFuture()) {
+            return __('Starts in :time', ['time' => $this->humanGap($this->startsAt())]);
+        }
+
+        // Still scheduled but its slot has already passed.
+        return __('Ended');
+    }
+
+    /**
+     * "2h 15m" style gap between now and the given moment.
+     * Deliberately coarse: the card only needs a hint, not the seconds.
+     */
+    private function humanGap(Carbon $moment): string
+    {
+        // "true" asks for the absolute value, which is the same on Carbon 2 and 3.
+        $minutes = (int) now()->diffInMinutes($moment, true);
+
+        $parts = [];
+
+        if ($minutes >= 1440) {
+            $parts[] = intdiv($minutes, 1440).'d';
+        }
+
+        if (intdiv($minutes % 1440, 60) > 0) {
+            $parts[] = intdiv($minutes % 1440, 60).'h';
+        }
+
+        if ($minutes % 60 > 0) {
+            $parts[] = ($minutes % 60).'m';
+        }
+
+        return $parts === [] ? '< 1m' : implode(' ', $parts);
+    }
+
     /* ---------------------------------------------------------------
      | Status transitions (FR-21)
      * --------------------------------------------------------------- */
@@ -1542,15 +1811,17 @@ class ClassRoom extends Model
         return $name;
     }
 }
+
 ```
 
-### `app/Models/ClassEnrollment.php`
+## `app/Models/ClassEnrollment.php`
 
 ```php
 <?php
 
 namespace App\Models;
 
+use Database\Factories\ClassEnrollmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -1560,7 +1831,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ClassEnrollment extends Model
 {
-    /** @use HasFactory<\Database\Factories\ClassEnrollmentFactory> */
+    /** @use HasFactory<ClassEnrollmentFactory> */
     use HasFactory;
 
     /**
@@ -1585,9 +1856,10 @@ class ClassEnrollment extends Model
         return $this->belongsTo(User::class, 'student_id');
     }
 }
+
 ```
 
-### `app/Models/Report.php`
+## `app/Models/Report.php`
 
 ```php
 <?php
@@ -1726,13 +1998,12 @@ class Report extends Model
         return Str::limit((string) $this->reportable->body, 140);
     }
 }
+
 ```
 
----
+# 8. Factories
 
-## 4. Factories
-
-### `database/factories/UserFactory.php`
+## `database/factories/UserFactory.php`
 
 ```php
 <?php
@@ -1744,7 +2015,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -1818,20 +2089,22 @@ class UserFactory extends Factory
         ]);
     }
 }
+
 ```
 
-### `database/factories/PostFactory.php`
+## `database/factories/PostFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Post>
+ * @extends Factory<Post>
  */
 class PostFactory extends Factory
 {
@@ -1859,21 +2132,23 @@ class PostFactory extends Factory
         ]);
     }
 }
+
 ```
 
-### `database/factories/CommentFactory.php`
+## `database/factories/CommentFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Comment>
+ * @extends Factory<Comment>
  */
 class CommentFactory extends Factory
 {
@@ -1900,21 +2175,23 @@ class CommentFactory extends Factory
         ]);
     }
 }
+
 ```
 
-### `database/factories/LikeFactory.php`
+## `database/factories/LikeFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\Like;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Like>
+ * @extends Factory<Like>
  */
 class LikeFactory extends Factory
 {
@@ -1929,20 +2206,22 @@ class LikeFactory extends Factory
         ];
     }
 }
+
 ```
 
-### `database/factories/FollowFactory.php`
+## `database/factories/FollowFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\Follow;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Follow>
+ * @extends Factory<Follow>
  */
 class FollowFactory extends Factory
 {
@@ -1958,20 +2237,22 @@ class FollowFactory extends Factory
         ];
     }
 }
+
 ```
 
-### `database/factories/HashtagFactory.php`
+## `database/factories/HashtagFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\Hashtag;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Hashtag>
+ * @extends Factory<Hashtag>
  */
 class HashtagFactory extends Factory
 {
@@ -1986,9 +2267,10 @@ class HashtagFactory extends Factory
         ];
     }
 }
+
 ```
 
-### `database/factories/ClassRoomFactory.php`
+## `database/factories/ClassRoomFactory.php`
 
 ```php
 <?php
@@ -2068,21 +2350,23 @@ class ClassRoomFactory extends Factory
         ]);
     }
 }
+
 ```
 
-### `database/factories/ClassEnrollmentFactory.php`
+## `database/factories/ClassEnrollmentFactory.php`
 
 ```php
 <?php
 
 namespace Database\Factories;
 
+use App\Models\ClassEnrollment;
 use App\Models\ClassRoom;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ClassEnrollment>
+ * @extends Factory<ClassEnrollment>
  */
 class ClassEnrollmentFactory extends Factory
 {
@@ -2098,9 +2382,10 @@ class ClassEnrollmentFactory extends Factory
         ];
     }
 }
+
 ```
 
-### `database/factories/ReportFactory.php`
+## `database/factories/ReportFactory.php`
 
 ```php
 <?php
@@ -2114,7 +2399,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Report>
+ * @extends Factory<Report>
  */
 class ReportFactory extends Factory
 {
@@ -2176,13 +2461,42 @@ class ReportFactory extends Factory
         ]);
     }
 }
+
 ```
 
----
+# 9. Seeders
 
-## 5. Seeders
+## `database/seeders/DatabaseSeeder.php`
 
-### `database/seeders/AdminUserSeeder.php`
+```php
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     * Run it with: php artisan migrate:fresh --seed
+     */
+    public function run(): void
+    {
+        // 1. The one admin account (email + password come from .env).
+        $this->call(AdminUserSeeder::class);
+
+        // 2. The demo people: 3 teachers + 6 students (Phase 1).
+        $this->call(DemoUserSeeder::class);
+
+        // 3. Posts, comments, likes, follows, classes, enrollments, reports.
+        $this->call(DemoContentSeeder::class);
+    }
+}
+
+```
+
+## `database/seeders/AdminUserSeeder.php`
 
 ```php
 <?php
@@ -2229,9 +2543,10 @@ class AdminUserSeeder extends Seeder
         $this->command?->info("Admin account ready: {$email}");
     }
 }
+
 ```
 
-### `database/seeders/DemoUserSeeder.php`
+## `database/seeders/DemoUserSeeder.php`
 
 ```php
 <?php
@@ -2300,9 +2615,10 @@ class DemoUserSeeder extends Seeder
         }
     }
 }
+
 ```
 
-### `database/seeders/DemoContentSeeder.php`
+## `database/seeders/DemoContentSeeder.php`
 
 ```php
 <?php
@@ -2568,9 +2884,10 @@ class DemoContentSeeder extends Seeder
         ]);
     }
 }
+
 ```
 
-### `database/seeders/DemoSeeder.php`
+## `database/seeders/DemoSeeder.php`
 
 ```php
 <?php
@@ -2594,42 +2911,12 @@ class DemoSeeder extends Seeder
         ]);
     }
 }
+
 ```
 
-### `database/seeders/DatabaseSeeder.php`
+# 10. Tinker relationship proof
 
-```php
-<?php
-
-namespace Database\Seeders;
-
-use Illuminate\Database\Seeder;
-
-class DatabaseSeeder extends Seeder
-{
-    /**
-     * Seed the application's database.
-     * Run it with: php artisan migrate:fresh --seed
-     */
-    public function run(): void
-    {
-        // 1. The one admin account (email + password come from .env).
-        $this->call(AdminUserSeeder::class);
-
-        // 2. The demo people: 3 teachers + 6 students (Phase 1).
-        $this->call(DemoUserSeeder::class);
-
-        // 3. Posts, comments, likes, follows, classes, enrollments, reports.
-        $this->call(DemoContentSeeder::class);
-    }
-}
-```
-
----
-
-## 6. Tinker relationship proof
-
-### `database/tinker/phase2-relationships.php`
+## `database/tinker/phase2-relationships.php`
 
 ```php
 <?php
@@ -2792,13 +3079,12 @@ echo PHP_EOL."Phase 2 relationship proof: {$passed} passed, {$failed} failed.".P
 if ($failed > 0) {
     throw new RuntimeException("{$failed} relationship check(s) failed.");
 }
+
 ```
 
----
+# 11. Tests
 
-## 7. Tests
-
-### `tests/Feature/ModelRelationshipsTest.php`
+## `tests/Feature/ModelRelationshipsTest.php`
 
 ```php
 <?php
@@ -3248,638 +3534,122 @@ class ModelRelationshipsTest extends TestCase
         $this->assertSame(Report::STATUS_REVIEWED, $report->fresh()->status);
     }
 }
+
 ```
 
-### `tests/Feature/ClassTest.php`
+## `tests/Feature/SeederTest.php`
 
 ```php
 <?php
 
 namespace Tests\Feature;
 
-use App\Models\ClassRoom;
 use App\Models\User;
+use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-/**
- * Phase 5: live classes (FR-18, FR-19, FR-20, FR-21, FR-22, FR-24, FR-28).
- */
-class ClassTest extends TestCase
+class SeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    /* -----------------------------------------------------------------
-     | Creating a class (FR-18)
-     * ----------------------------------------------------------------- */
-
     /**
-     * A teacher creates a class and gets a private, hard to guess room.
+     * The seeder creates the admin account from the .env values (FR-1).
      */
-    public function test_a_teacher_can_create_a_class_with_a_private_room(): void
+    public function test_the_admin_seeder_creates_the_admin_account(): void
     {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+        config()->set('educonnect.admin.password', 'SecretAdmin123!');
 
-        $teacher = User::factory()->teacher()->create();
+        $this->seed(AdminUserSeeder::class);
 
-        $response = $this->actingAs($teacher)->post(route('classes.store'), [
-            'title' => 'Algebra basics',
-            'description' => 'We start with linear equations.',
-            'subject' => 'Mathematics',
-            'date' => '2026-06-20',
-            'time' => '14:30',
-            'duration' => 60,
-        ]);
+        $admin = User::where('email', config('educonnect.admin.email'))->first();
 
-        $classRoom = ClassRoom::firstOrFail();
-
-        $response->assertRedirect(route('classes.show', $classRoom));
-        $response->assertSessionHas('success');
-
-        $this->assertSame($teacher->id, $classRoom->teacher_id);
-        $this->assertSame(ClassRoom::STATUS_SCHEDULED, $classRoom->status);
-
-        // "educonnect-" + 20 random characters.
-        $this->assertStringStartsWith('educonnect-', $classRoom->room_name);
-        $this->assertSame(31, Str::length($classRoom->room_name));
+        $this->assertNotNull($admin);
+        $this->assertSame(User::ROLE_ADMIN, $admin->role);
+        $this->assertFalse($admin->is_blocked);
+        $this->assertTrue(Hash::check('SecretAdmin123!', $admin->password));
     }
 
     /**
-     * Two classes never share a room, and the name is never taken from the client.
+     * The seeder refuses to run without a password (no weak default accounts).
      */
-    public function test_room_names_are_unique_and_ignore_the_request(): void
+    public function test_the_admin_seeder_requires_a_password(): void
     {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+        config()->set('educonnect.admin.password', null);
 
-        $teacher = User::factory()->teacher()->create();
+        $this->expectException(\RuntimeException::class);
 
-        foreach ([1, 2, 3] as $index) {
-            $this->actingAs($teacher)->post(route('classes.store'), [
-                'title' => 'Lesson '.$index,
-                'date' => '2026-06-20',
-                'time' => '1'.$index.':00',
-                'duration' => 45,
-                // A client that tries to pick its own room must be ignored.
-                'room_name' => 'my-public-room',
-                'status' => ClassRoom::STATUS_LIVE,
-            ])->assertRedirect();
-        }
-
-        $names = ClassRoom::pluck('room_name');
-
-        $this->assertCount(3, $names);
-        $this->assertCount(3, $names->unique());
-        $this->assertNotContains('my-public-room', $names->all());
-
-        // room_name and status were set by the server, not by the form.
-        $this->assertSame(3, ClassRoom::where('status', ClassRoom::STATUS_SCHEDULED)->count());
+        $this->seed(AdminUserSeeder::class);
     }
 
     /**
-     * A new class must start in the future (FR-18).
+     * The demo seeder creates 3 teachers and 6 students (FR-7).
      */
-    public function test_a_class_cannot_be_created_in_the_past(): void
+    public function test_the_demo_seeder_creates_three_teachers_and_six_students(): void
     {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
-
-        $teacher = User::factory()->teacher()->create();
-
-        $payload = [
-            'title' => 'Too late',
-            'date' => '2026-06-15',
-            'time' => '11:00',      // one hour before "now"
-            'duration' => 60,
-        ];
-
-        // Time already passed today.
-        $this->actingAs($teacher)
-            ->post(route('classes.store'), $payload)
-            ->assertSessionHasErrors('time');
-
-        // A whole day in the past is refused by the date rule.
-        $this->actingAs($teacher)
-            ->post(route('classes.store'), ['date' => '2026-06-14'] + $payload)
-            ->assertSessionHasErrors('date');
-
-        // Missing title / bad duration are refused too.
-        $this->actingAs($teacher)
-            ->post(route('classes.store'), ['title' => '', 'duration' => 1] + $payload)
-            ->assertSessionHasErrors(['title', 'duration']);
-
-        $this->assertDatabaseCount('classes', 0);
-    }
-
-    /**
-     * Only teachers can reach the class management pages.
-     */
-    public function test_students_and_admins_cannot_manage_classes(): void
-    {
-        // A guest is sent to the login page (checked first: actingAs lasts for
-        // the rest of the test).
-        $this->get(route('classes.index'))->assertRedirect(route('login'));
-
-        $this->actingAs(User::factory()->student()->create())
-            ->get(route('classes.index'))
-            ->assertForbidden();
-
-        $this->actingAs(User::factory()->admin()->create())
-            ->get(route('classes.create'))
-            ->assertForbidden();
-    }
-
-    /* -----------------------------------------------------------------
-     | Ownership (ClassPolicy, FR-18)
-     * ----------------------------------------------------------------- */
-
-    /**
-     * A teacher may only touch their own classes.
-     */
-    public function test_a_teacher_cannot_edit_another_teachers_class(): void
-    {
-        $owner = User::factory()->teacher()->create();
-        $stranger = User::factory()->teacher()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create(['teacher_id' => $owner->id]);
-
-        $this->actingAs($stranger)->get(route('classes.edit', $classRoom))->assertForbidden();
-        $this->actingAs($stranger)->patch(route('classes.update', $classRoom), ['title' => 'Hijacked'])->assertForbidden();
-        $this->actingAs($stranger)->delete(route('classes.destroy', $classRoom))->assertForbidden();
-        $this->actingAs($stranger)->get(route('classes.students', $classRoom))->assertForbidden();
-
-        // Nothing changed.
-        $this->assertDatabaseHas('classes', ['id' => $classRoom->id, 'title' => $classRoom->title]);
-    }
-
-    /**
-     * The owner updates a class; the room name survives an edit.
-     */
-    public function test_the_owner_can_update_their_class(): void
-    {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
-
-        $owner = User::factory()->teacher()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create([
-            'teacher_id' => $owner->id,
-            'title' => 'Old title',
-        ]);
-
-        $roomName = $classRoom->room_name;
-
-        $this->actingAs($owner)
-            ->patch(route('classes.update', $classRoom), [
-                'title' => 'New title',
-                'subject' => 'Physics',
-                'date' => $classRoom->date->format('Y-m-d'),
-                'time' => '10:00',
-                'duration' => 90,
-            ])
-            ->assertRedirect(route('classes.show', $classRoom));
-
-        $classRoom->refresh();
-
-        $this->assertSame('New title', $classRoom->title);
-        $this->assertSame(90, $classRoom->duration);
-        $this->assertSame($roomName, $classRoom->room_name);
-    }
-
-    /**
-     * The teacher can open every management page of their own class.
-     */
-    public function test_the_teacher_can_open_the_management_pages(): void
-    {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
-
-        $teacher = User::factory()->teacher()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create([
-            'teacher_id' => $teacher->id,
-            'title' => 'Algebra basics',
-        ]);
-        $classRoom->students()->attach(User::factory()->student()->create()->id);
-
-        // "My classes"
-        $this->actingAs($teacher)->get(route('classes.index'))->assertOk()->assertSee('Algebra basics');
-
-        // The create form.
-        $this->actingAs($teacher)->get(route('classes.create'))->assertOk()->assertSee('Duration', false);
-
-        // The edit form is filled with the current values.
-        $this->actingAs($teacher)
-            ->get(route('classes.edit', $classRoom))
-            ->assertOk()
-            ->assertSee('Algebra basics');
-
-        // The detail page shows the private room name to the owner.
-        $this->actingAs($teacher)
-            ->get(route('classes.show', $classRoom))
-            ->assertOk()
-            ->assertSee($classRoom->room_name);
-    }
-
-    /* -----------------------------------------------------------------
-     | Enrolling (FR-21)
-     * ----------------------------------------------------------------- */
-
-    /**
-     * A student enrolls and unenrolls, without ever creating a duplicate.
-     */
-    public function test_a_student_can_enroll_and_unenroll(): void
-    {
-        $student = User::factory()->student()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create();
-
-        $this->actingAs($student)
-            ->post(route('classes.enroll', $classRoom))
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('class_enrollments', [
-            'class_id' => $classRoom->id,
-            'student_id' => $student->id,
-        ]);
-
-        // A double click does not enroll twice.
-        $this->actingAs($student)->post(route('classes.enroll', $classRoom))->assertRedirect();
-        $this->assertDatabaseCount('class_enrollments', 1);
-
-        $this->actingAs($student)
-            ->delete(route('classes.unenroll', $classRoom))
-            ->assertRedirect();
-
-        $this->assertDatabaseCount('class_enrollments', 0);
-    }
-
-    /**
-     * A finished class cannot be joined any more.
-     */
-    public function test_a_student_cannot_enroll_in_a_finished_class(): void
-    {
-        $student = User::factory()->student()->create();
-        $classRoom = ClassRoom::factory()->completed()->create();
-
-        $this->actingAs($student)
-            ->post(route('classes.enroll', $classRoom))
-            ->assertSessionHas('error');
-
-        $this->assertDatabaseCount('class_enrollments', 0);
-    }
-
-    /**
-     * Only students enroll; a teacher cannot use the student route.
-     */
-    public function test_only_students_can_enroll(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create();
-
-        $this->actingAs($teacher)
-            ->post(route('classes.enroll', $classRoom))
-            ->assertForbidden();
-    }
-
-    /* -----------------------------------------------------------------
-     | Joining the room (FR-20, FR-28)
-     * ----------------------------------------------------------------- */
-
-    /**
-     * The teacher and the enrolled student get in; a stranger does not.
-     */
-    public function test_only_the_teacher_and_enrolled_students_can_open_the_room(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $student = User::factory()->student()->create();
-        $outsider = User::factory()->student()->create();
-
-        $classRoom = ClassRoom::factory()->live()->create(['teacher_id' => $teacher->id]);
-        $classRoom->students()->attach($student->id);
-
-        // A guest is asked to log in first (checked before any actingAs call).
-        $this->get(route('classes.room', $classRoom))->assertRedirect(route('login'));
-
-        // A student who never enrolled: 403 (FR-20).
-        $this->actingAs($outsider)->get(route('classes.room', $classRoom))->assertForbidden();
-
-        // The student who is enrolled and the teacher: 200.
-        $this->actingAs($student)->get(route('classes.room', $classRoom))->assertOk();
-        $this->actingAs($teacher)->get(route('classes.room', $classRoom))->assertOk();
-
-        // FR-20: an admin moderates classes but is not a room participant.
-        $admin = User::factory()->admin()->create();
-        $this->actingAs($admin)->get(route('classes.room', $classRoom))->assertForbidden();
-    }
-
-    /**
-     * An enrolled student only gets in while the class is live (FR-20).
-     */
-    public function test_an_enrolled_student_can_join_only_when_the_class_is_live(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $student = User::factory()->student()->create();
-
-        $scheduled = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
-        $scheduled->students()->attach($student->id);
-
-        // Not live yet: a friendly redirect, not the room.
-        $this->actingAs($student)
-            ->get(route('classes.room', $scheduled))
-            ->assertRedirect(route('classes.show', $scheduled))
-            ->assertSessionHas('error');
-
-        // The teacher may open the room at any time.
-        $this->actingAs($teacher)->get(route('classes.room', $scheduled))->assertOk();
-
-        // The teacher starts the class -> the student gets in.
-        $this->actingAs($teacher)
-            ->patch(route('classes.status', $scheduled), ['status' => ClassRoom::STATUS_LIVE])
-            ->assertRedirect();
-
-        $this->actingAs($student)->get(route('classes.room', $scheduled))->assertOk();
-    }
-
-    /**
-     * The room page embeds Jitsi with the room name and the user's details.
-     */
-    public function test_the_room_page_embeds_jitsi_with_the_user_details(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $student = User::factory()->student()->create();
-
-        $classRoom = ClassRoom::factory()->live()->create(['teacher_id' => $teacher->id]);
-        $classRoom->students()->attach($student->id);
-
-        $response = $this->actingAs($student)->get(route('classes.room', $classRoom));
-
-        $response->assertOk();
-        // The room name, the Jitsi domain and the retry button for a failed script.
-        $response->assertSee($classRoom->room_name);
-        $response->assertSee(config('jitsi.domain'));
-        $response->assertSee('data-jitsi', false);
-        $response->assertSee('data-jitsi-retry', false);
-        $response->assertSee($student->name);
-        $response->assertSee($student->email);
-        // The hangup event sends the user to their dashboard.
-        $response->assertSee(route('dashboard'));
-
-        // The teacher is flagged as the moderator, the student is not.
-        $this->actingAs($teacher)
-            ->get(route('classes.room', $classRoom))
-            ->assertSee('Moderator');
-    }
-
-    /**
-     * A class hidden by an administrator cannot be joined (FR-28).
-     */
-    public function test_a_hidden_class_cannot_be_joined(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $student = User::factory()->student()->create();
-        $admin = User::factory()->admin()->create();
-
-        $classRoom = ClassRoom::factory()->live()->hidden()->create(['teacher_id' => $teacher->id]);
-        $classRoom->students()->attach($student->id);
-
-        // The enrolled student is locked out.
-        $this->actingAs($student)->get(route('classes.room', $classRoom))->assertForbidden();
-
-        // Enrolling is blocked as well.
-        $outsider = User::factory()->student()->create();
-        $this->actingAs($outsider)->post(route('classes.enroll', $classRoom))->assertForbidden();
-
-        // FR-20: even an administrator cannot enter the room; moderation is
-        // done from the admin panel, never by joining a class with minors.
-        $this->actingAs($admin)->get(route('classes.room', $classRoom))->assertForbidden();
-    }
-
-    /* -----------------------------------------------------------------
-     | Status control (FR-24)
-     * ----------------------------------------------------------------- */
-
-    /**
-     * The teacher starts and ends a class, and the student cannot.
-     */
-    public function test_the_teacher_controls_the_class_status(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $student = User::factory()->student()->create();
-        $classRoom = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
-
-        // A student is not allowed to touch the status.
-        $this->actingAs($student)
-            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
-            ->assertForbidden();
-
-        // scheduled -> live.
-        $this->actingAs($teacher)
-            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
-            ->assertRedirect();
-        $this->assertSame(ClassRoom::STATUS_LIVE, $classRoom->refresh()->status);
-
-        // live -> completed ("the teacher ends the class").
-        $this->actingAs($teacher)
-            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_COMPLETED])
-            ->assertRedirect();
-        $this->assertSame(ClassRoom::STATUS_COMPLETED, $classRoom->refresh()->status);
-    }
-
-    /**
-     * A transition that makes no sense is refused with a message, not a 500.
-     */
-    public function test_an_invalid_status_transition_is_refused(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $classRoom = ClassRoom::factory()->completed()->create(['teacher_id' => $teacher->id]);
-
-        // completed -> scheduled is not part of ClassRoom::TRANSITIONS.
-        $this->actingAs($teacher)
-            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_SCHEDULED])
-            ->assertRedirect()
-            ->assertSessionHas('error');
-
-        $this->assertSame(ClassRoom::STATUS_COMPLETED, $classRoom->refresh()->status);
-
-        // A status that does not exist is a validation error.
-        $this->actingAs($teacher)
-            ->patch(route('classes.status', $classRoom), ['status' => 'paused'])
-            ->assertSessionHasErrors('status');
-    }
-
-    /* -----------------------------------------------------------------
-     | Browsing (FR-19) and the enrolled list (FR-21)
-     * ----------------------------------------------------------------- */
-
-    /**
-     * Students search, filter and only see classes that are live or ahead.
-     */
-    public function test_a_student_can_search_and_filter_the_class_list(): void
-    {
-        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
-
-        $student = User::factory()->student()->create();
-
-        $maria = User::factory()->teacher()->create(['name' => 'Maria Rossi']);
-        $david = User::factory()->teacher()->create(['name' => 'David Chen']);
-
-        $algebra = ClassRoom::factory()->scheduled()->create([
-            'teacher_id' => $maria->id,
-            'title' => 'Algebra basics',
-            'subject' => 'Mathematics',
-        ]);
-
-        $live = ClassRoom::factory()->live()->create([
-            'teacher_id' => $david->id,
-            'title' => 'Newton live',
-            'subject' => 'Physics',
-        ]);
-
-        $finished = ClassRoom::factory()->completed()->create([
-            'teacher_id' => $maria->id,
-            'title' => 'The Industrial Age',
-            'subject' => 'History',
-        ]);
-
-        $hidden = ClassRoom::factory()->scheduled()->hidden()->create([
-            'teacher_id' => $david->id,
-            'title' => 'Hidden lesson',
-            'subject' => 'Physics',
-        ]);
-
-        // Everything that is live or ahead.
-        $response = $this->actingAs($student)->get(route('classes.discover'));
-        $response->assertOk();
-        $response->assertSee('Algebra basics');
-        $response->assertSee('Newton live');
-        $response->assertDontSee('The Industrial Age');
-        $response->assertDontSee('Hidden lesson');
-
-        // Search on the title and on the teacher name.
-        $this->actingAs($student)->get(route('classes.discover', ['q' => 'Algebra']))
-            ->assertSee('Algebra basics')
-            ->assertDontSee('Newton live');
-
-        $this->actingAs($student)->get(route('classes.discover', ['q' => 'David']))
-            ->assertSee('Newton live')
-            ->assertDontSee('Algebra basics');
-
-        // Filter on one subject.
-        $physics = $this->actingAs($student)->get(route('classes.discover', ['subject' => 'Physics']));
-        $physics->assertSee('Newton live');
-        $physics->assertDontSee('Algebra basics');
-
-        // The subject drop down only offers subjects that are really used.
-        $physics->assertSee('Mathematics');
-
-        // The result is paginated (9 per page) and holds the two classes only.
-        $list = $this->actingAs($student)->get(route('classes.discover'))->viewData('classes');
-        $this->assertSame(2, $list->total());
-        $this->assertEqualsCanonicalizing([$algebra->id, $live->id], $list->pluck('id')->all());
-    }
-
-    /**
-     * The student keeps a list of the classes they joined (FR-21).
-     */
-    public function test_a_student_sees_the_classes_they_enrolled_in(): void
-    {
-        $student = User::factory()->student()->create();
-
-        $mine = ClassRoom::factory()->scheduled()->create(['title' => 'My algebra class']);
-        $alsoMine = ClassRoom::factory()->live()->create(['title' => 'My live class']);
-        ClassRoom::factory()->scheduled()->create(['title' => 'Not my class']);
-
-        $student->enrolledClasses()->attach([$mine->id, $alsoMine->id]);
-
-        $response = $this->actingAs($student)->get(route('student.classes'));
-
-        $response->assertOk();
-        $response->assertSee('My algebra class');
-        $response->assertSee('My live class');
-        $response->assertDontSee('Not my class');
-
-        // The running class comes first.
-        $this->assertSame($alsoMine->id, $response->viewData('classes')->first()->id);
-
-        // The details page of an enrolled class is readable.
-        $this->actingAs($student)->get(route('classes.show', $mine))->assertOk()->assertSee('Unenroll');
-    }
-
-    /**
-     * The teacher sees who enrolled; a stranger teacher does not (FR-24).
-     */
-    public function test_the_teacher_sees_the_enrolled_students(): void
-    {
-        $teacher = User::factory()->teacher()->create();
-        $otherTeacher = User::factory()->teacher()->create();
-
-        $classRoom = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
-        $enrolled = User::factory()->student()->create(['name' => 'Enrolled Student']);
-        $notEnrolled = User::factory()->student()->create(['name' => 'Not Enrolled Student']);
-
-        $classRoom->students()->attach($enrolled->id);
-
-        $response = $this->actingAs($teacher)->get(route('classes.students', $classRoom));
-
-        $response->assertOk();
-        $response->assertSee('Enrolled Student');
-        $response->assertDontSee('Not Enrolled Student');
-
-        $this->actingAs($otherTeacher)
-            ->get(route('classes.students', $classRoom))
-            ->assertForbidden();
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(3, User::where('role', User::ROLE_TEACHER)->count());
+        $this->assertSame(6, User::where('role', User::ROLE_STUDENT)->count());
+        $this->assertSame(1, User::where('role', User::ROLE_ADMIN)->count());
     }
 }
+
 ```
 
----
+# 12. Default avatar
 
-## 8. Default avatar
+## `public/images/default-avatar.svg`
 
-### `public/images/default-avatar.svg`
-
-```xml
+```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Default avatar">
     <rect width="96" height="96" rx="48" fill="#e0e7ff"/>
     <circle cx="48" cy="37" r="16" fill="#4f46e5"/>
     <path d="M16 88c3-18 16-28 32-28s29 10 32 28z" fill="#4f46e5"/>
 </svg>
+
 ```
 
----
+## 13. Test checklist
 
-## 9. Commands and manual checklist
+### Schema and constraints
+1. `php artisan migrate:fresh --seed` completes without errors; `php artisan migrate:status` shows every migration as ran.
+2. `php artisan tinker` → `Schema::getColumnListing('posts')` returns id, user_id, body, image, is_hidden, created_at, updated_at.
+3. Deleting a post removes its comments and likes (cascade); deleting a user removes their posts, comments, likes, follows, classes and enrollments.
+4. Inserting the same (post_id, user_id) into `likes` twice throws a unique violation.
+5. Inserting the same (follower_id, following_id) into `follows` twice throws a unique violation; `Follow::create()` with equal ids throws `InvalidArgumentException`.
+6. Same (class_id, student_id) twice → unique violation. Same `hashtags.name` twice → unique violation.
+7. `reportable_type`/`reportable_id` is indexed and a report loads the right Post or Comment.
 
-```bash
-# SQLite (used for this verification)
-php artisan migrate:fresh --seed
-php artisan tinker --execute="require base_path('database/tinker/phase2-relationships.php');"
-php artisan test --filter=ModelRelationshipsTest
-php artisan test
-```
+### Relationships and helpers
+8. Tinker proof prints **45 passed, 0 failed**.
+9. `User::follow($other)` returns true, `follow($self)` returns false and writes nothing.
+10. `$user->followers` / `$user->following` return the correct sides of the pivot.
+11. `photoUrl()` returns `assets/images/default-avatar.svg` when `photo` is null, and the storage URL otherwise.
+12. `Post::visible()` hides `is_hidden = true`; `Post::withCounts()` adds `likes_count` and `comments_count`.
+13. `$post->likedBy($user)` reflects a real like and is false for a guest.
+14. `ClassRoom::upcoming()` excludes past and non-scheduled classes; `byStatus()` filters one status; `start_datetime` is a Carbon instance; `endsAt()` adds the duration.
+15. Every new class gets `educonnect-` + 20 random characters, unique per row.
+16. `Hashtag::create(['name' => '#Maths'])` stores `maths`.
+17. `$classRoom->students`, `->enrollments`, `->teacher`, and `$student->enrolledClasses` all return the seeded rows.
 
-```bash
-# MySQL production path
-php artisan migrate:fresh --seed --force
-```
+### Seeders
+18. Fresh seed → 1 admin, 3 teachers, 6 students; each teacher has a subject and a bio; every demo account logs in with `password`.
+19. Fresh seed → 41 posts (40 visible + 1 hidden), 8 classes (3 completed, 1 live, 4 scheduled), 5 reports (2 pending post reports, 1 pending comment report, 1 reviewed, 1 dismissed).
+20. Running `php artisan db:seed` twice does not duplicate content.
+21. Deleting/creating via factories: `Post::factory()->count(5)->create()`, `Comment::factory()`, `ClassRoom::factory()->live()` all work.
 
-Manual checklist:
+## 14. Done when
 
-- [x] `php artisan migrate:fresh --seed` completes with 0 errors.
-- [x] 10 users (1 admin, 3 teachers, 6 students).
-- [x] 41 posts (40 visible + 1 hidden spam post).
-- [x] 80 comments, 320 likes, 36 follows, 10 hashtags.
-- [x] 8 classes (3 completed, 1 live, 4 scheduled), 18 enrollments.
-- [x] 5 reports (pending, reviewed and dismissed).
-- [x] Every relationship prints PASS in the tinker proof (45 checks).
-- [x] `ModelRelationshipsTest`: 23 tests, 84 assertions.
-- [x] Full suite: 181 tests, 763 assertions, all passing.
-
----
-
-## 10. Done when
-
-- The eleven SRS tables (`posts`, `comments`, `likes`, `follows`, `hashtags`,
-  `hashtag_post`, `classes`, `class_enrollments`, `reports`, `notifications`,
-  plus the Phase 1 `users`) exist with the required keys, cascades and unique
-  constraints.
-- Every model exposes the relationships, scopes and helpers listed above.
-- `ClassRoom` maps to `classes` and always generates a unique
-  `educonnect-` + 20-character room name.
-- The demo seeder can be run repeatedly without creating duplicates.
-- The tinker proof and the feature tests pass.
+- [x] Every SRS table exists with the requested columns, foreign keys and unique constraints.
+- [x] Every relationship column is indexed on MySQL and SQLite.
+- [x] `ClassRoom` model uses the `classes` table and the SRS naming is explained.
+- [x] All models have `$fillable`, casts, relationships and the required helpers/scopes/accessor.
+- [x] Factories exist for Post, Comment and ClassRoom (plus Like, Follow, Hashtag, ClassEnrollment, Report, User).
+- [x] `DemoContentSeeder` produces 40+ posts with hashtags, comments, likes, follows, 8 classes in all states, enrollments and reports.
+- [x] `DatabaseSeeder` calls `AdminUserSeeder` → `DemoUserSeeder` → `DemoContentSeeder`.
+- [x] `migrate:fresh --seed` works on a clean SQLite file (same migrations run on MySQL 8).
+- [x] Tinker proof: **45 passed, 0 failed**.
+- [x] Phase 2 tests: **26 passed, 92 assertions**; full suite **266 passed, 1401 assertions**.

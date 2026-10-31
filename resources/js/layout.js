@@ -55,3 +55,98 @@ if (document.readyState === 'loading') {
 } else {
     bootSidebarToggle();
 }
+
+/* -----------------------------------------------------------------------------
+ | Sidebar drawer: close after tapping a link (Phase 3D)
+ | -----------------------------------------------------------------------------
+ | Bootstrap's offcanvas stays open when a link inside it is clicked. On a
+ | phone that leaves the drawer covering the page, so hide it first; the link
+ | still navigates because the default action is not prevented.
+ */
+
+function bootSidebarAutoClose() {
+    const sidebar = document.getElementById('appSidebar');
+
+    if (!sidebar) {
+        return;
+    }
+
+    sidebar.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href]');
+
+        if (!link || !window.bootstrap?.Offcanvas) {
+            return;
+        }
+
+        // Only the drawer (< lg) needs closing; on desktop the sidebar is a column.
+        if (window.matchMedia('(max-width: 991.98px)').matches) {
+            window.bootstrap.Offcanvas.getOrCreateInstance(sidebar).hide();
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootSidebarAutoClose);
+} else {
+    bootSidebarAutoClose();
+}
+
+/* -----------------------------------------------------------------------------
+ | Expandable phone search (Phase 3D)
+ | -----------------------------------------------------------------------------
+ | The navbar hides the full search box below md (there is not enough room).
+ | The magnifier button opens a full-width panel underneath, moves focus into
+ | the input, closes on Escape / outside tap, and resets when the viewport
+ | grows back to a desktop size.
+ */
+
+function bootMobileSearch() {
+    const toggle = document.querySelector('[data-mobile-search-toggle]');
+    const panel = document.getElementById('mobileSearchPanel');
+
+    if (!toggle || !panel) {
+        return;
+    }
+
+    const input = panel.querySelector('[data-search-input]');
+
+    const setOpen = (open) => {
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        if (open) {
+            window.requestAnimationFrame(() => input?.focus());
+        }
+    };
+
+    toggle.addEventListener('click', () => setOpen(panel.hidden));
+
+    panel.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            setOpen(false);
+            toggle.focus();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (panel.hidden) {
+            return;
+        }
+
+        if (!panel.contains(event.target) && !toggle.contains(event.target)) {
+            setOpen(false);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.matchMedia('(min-width: 768px)').matches) {
+            setOpen(false);
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootMobileSearch);
+} else {
+    bootMobileSearch();
+}

@@ -1,23 +1,41 @@
 # Phase 3B — Premium dashboard redesign
 
-**Project:** EduConnect (Laravel 12 + Bootstrap 5 + Vite + Chart.js)
-**Scope:** shared application shell, Admin dashboard, Teacher dashboard, Student dashboard
+**Project:** EduConnect · Laravel 12.70.2 · PHP 8.3 · Bootstrap 5.3.8 ·
+Bootstrap Icons · Chart.js 4 · Vite 6
+**Scope:** shared application shell, Admin dashboard, Teacher dashboard,
+Student dashboard, shared dashboard components
 **Status:** implemented, formatted, built and covered by the test suite
+
+Every file below is copied verbatim from the working repository. This document
+is the complete Phase 3B deliverable: design tokens, shell, all three
+dashboards, components, controllers, metrics layer, chart endpoints, scripts,
+tests, commands, visual checklist and acceptance criteria.
 
 ---
 
 ## 1. What this phase delivers
 
-- A single design system (`resources/sass/_variables.scss` + `resources/sass/app.scss`) with CSS custom properties, light/dark tokens, Inter, tabular numbers and a 16 px card radius.
-- A dark gradient sidebar with grouped, icon-led menus, an active indicator bar, a desktop icon-only collapse, a mobile offcanvas drawer and a user mini-card.
-- A sticky blurred top bar with page title + breadcrumbs, global search, a persisted dark-mode toggle, the live notification bell and the avatar menu.
-- Shared dashboard components: `stat-card`, `chart-card`, `activity-item`, `countdown`, `avatar-stack`, `progress-bar`, `empty-state` and `data-table`.
-- Three JSON chart endpoints, role protected and cached for five minutes through `App\Support\DashboardMetrics`.
-- Rebuilt Admin, Teacher and Student dashboards with heroes, charts, filters, quick actions, panels and empty states.
-- Five new JavaScript modules: `theme.js`, `charts.js`, `countdown.js`, `data-table.js`, `page-transitions.js`.
-- A new feature test file: `tests/Feature/DashboardRedesignTest.php`.
+- One design system (`resources/sass/_variables.scss` + `app.scss`): CSS custom
+  properties, light/dark tokens, Inter, tabular numbers, 16 px card radius,
+  soft borders, subtle shadows and hover lift.
+- A dark indigo→violet gradient sidebar with grouped icon menus, active
+  indicator bar, desktop icon-only collapse, mobile offcanvas drawer and a user
+  mini-card.
+- A sticky blurred top bar with page title + breadcrumbs, global search,
+  persisted dark-mode toggle, live notification bell and avatar menu.
+- Shared components: `stat-card` (trend + sparkline), `chart-card` (range
+  select, canvas, skeleton, text fallback), `activity-item`, `countdown`,
+  `avatar-stack`, `progress-bar`, `empty-state`, `data-table`.
+- Three role-protected JSON chart endpoints, cached for five minutes through
+  `App\Support\DashboardMetrics`.
+- Rebuilt Admin, Teacher and Student dashboards with heroes, charts, ranges,
+  panels, quick actions and empty states.
+- JavaScript modules: `theme.js`, `charts.js`, `countdown.js`, `data-table.js`,
+  `page-transitions.js` (plus `layout.js` for the sidebar).
+- Feature coverage: `DashboardRedesignTest` (5), `DashboardTest` (9),
+  `PhaseThreeUiTest` (12).
 
-All Phase 1 / 2 / 3 contracts are preserved:
+All earlier contracts are preserved:
 
 | Dashboard | Contract | State |
 | --- | --- | --- |
@@ -28,73 +46,81 @@ All Phase 1 / 2 / 3 contracts are preserved:
 | Student | `stats` keys `classes, upcoming, following` | unchanged |
 | Student | `upcomingClasses` and `recommendedTeachers` collections | unchanged |
 | Layout | `data-sidebar-toggle`, `data-bs-target="#appSidebar"`, `educonnect.sidebar.collapsed`, footer copy | unchanged |
-| Student | disabled `Join` keeps `aria-disabled="true"` and `disabled` | unchanged |
+| Student | scheduled `Join` keeps `aria-disabled="true"` and `disabled` | unchanged |
+
+### Verification snapshot
+
+```text
+Dashboard set (DashboardTest + DashboardRedesignTest + PhaseThreeUiTest)
+  → 26 passed, 235 assertions
+Full suite
+  → 266 passed, 1,401 assertions
+npm run build
+  → 139 modules, built in ~14 s
+Pint (app tests routes config database)
+  → passed
+Blade cache
+  → all 86 templates compiled
+```
 
 ---
 
 ## 2. File list
 
-### New files
+### Design system
 
 | Path | Purpose |
 | --- | --- |
-| `app/Support/DashboardMetrics.php` | Cached aggregates, trends, sparklines and range-aware chart series. |
-| `app/Http/Controllers/DashboardChartController.php` | JSON endpoints for the dashboard range selectors. |
-| `resources/sass/_variables.scss` | Bootstrap overrides + light/dark design tokens. |
-| `resources/js/theme.js` | Light/dark mode with `localStorage` and `prefers-color-scheme`. |
-| `resources/js/charts.js` | Themed Chart.js charts, gradients, range fetching and skeleton state. |
-| `resources/js/countdown.js` | Live class countdown timers. |
-| `resources/js/data-table.js` | Client-side search/sort for the table wrapper. |
-| `resources/js/page-transitions.js` | Short fade-out before in-app navigation. |
-| `resources/views/components/chart-card.blade.php` | Chart card with range select, canvas, skeleton and text fallback. |
-| `resources/views/components/activity-item.blade.php` | Timeline entry with icon, excerpt and relative time. |
-| `resources/views/components/countdown.blade.php` | Accessible day/hour/minute/second countdown. |
-| `resources/views/components/avatar-stack.blade.php` | Overlapping avatars with a `+N` remainder. |
-| `resources/views/components/progress-bar.blade.php` | Accessible enrollment progress bar. |
-| `resources/views/components/data-table.blade.php` | Table wrapper with search, sortable headers and footer slot. |
-| `tests/Feature/DashboardRedesignTest.php` | Phase 3B layout, endpoint, panel, hero and collection tests. |
-| `docs/PHASE-3B-DELIVERABLE.md` | This document. |
+| `resources/sass/_variables.scss` | Brand palette, surfaces, spacing, type scale, radius, shadows, z-index, sidebar and chart tokens, dark overrides |
+| `resources/sass/app.scss` | 2,775-line component layer: shell, sidebar, navbar, cards, stats, charts, tables, heroes, schedule, timeline, skeleton, reduced motion |
 
-### Modified files
+### Shell
 
-| Path | Change |
+| Path | Purpose |
 | --- | --- |
-| `resources/sass/app.scss` | Full design system, shell, components, dark mode, responsive and accessibility styles. |
-| `resources/js/app.js` | Imports the five new modules. |
-| `resources/views/layouts/app.blade.php` | Pre-paint theme/sidebar scripts, Inter, shell, skip link, footer and title handling. |
-| `resources/views/layouts/navigation.blade.php` | Sticky blurred navbar, page context, search, theme toggle, bell and avatar menu. |
-| `resources/views/layouts/sidebar.blade.php` | Dark gradient sidebar, grouped role menus, collapse, offcanvas and mini profile card. |
-| `resources/views/components/stat-card.blade.php` | Trend, direction, label and inline SVG sparkline. |
-| `resources/views/components/empty-state.blade.php` | Illustration icon, message and optional actions. |
-| `resources/views/components/class-card.blade.php` | Shared hover lift + dark-mode-safe title colour. |
-| `resources/views/components/user-card.blade.php` | Shared hover lift. |
-| `resources/views/dashboards/admin.blade.php` | Rebuilt admin dashboard. |
-| `resources/views/dashboards/teacher.blade.php` | Rebuilt teacher dashboard. |
-| `resources/views/dashboards/student.blade.php` | Rebuilt student dashboard. |
-| `app/Http/Controllers/AdminDashboardController.php` | Uses `DashboardMetrics`, adds panels and chart series. |
-| `app/Http/Controllers/TeacherDashboardController.php` | Adds hero, schedule, progress, charts and keeps paginator/activity. |
-| `app/Http/Controllers/StudentDashboardController.php` | Adds hero, recommendations, activity chart and feed preview. |
-| `routes/web.php` | Adds the three role-protected `dashboard.charts` routes. |
+| `resources/views/layouts/app.blade.php` | Document shell, theme bootstrap, page transitions, stacks |
+| `resources/views/layouts/navigation.blade.php` | Sticky blurred navbar, search, theme, bell, avatar menu |
+| `resources/views/layouts/sidebar.blade.php` | Gradient role sidebar, grouped links, collapse, user mini-card |
+| `resources/views/layouts/mobile-nav.blade.php` | Bottom bar for phones |
 
-### Pint formatting-only files
+### Dashboards
 
-`vendor/bin/pint` also normalised import/docblock style in these existing files. No behaviour changed:
+| Path | Purpose |
+| --- | --- |
+| `resources/views/dashboards/admin.blade.php` | Greeting, 5 stat cards, 4 charts, moderation, users, posts, live classes |
+| `resources/views/dashboards/teacher.blade.php` | Next-class hero, 4 cards, 2 charts, week strip, table, timeline |
+| `resources/views/dashboards/student.blade.php` | Next-class hero, 4 cards, upcoming grid, recommendations, activity, feed preview |
 
-- `app/Http/Controllers/PostController.php`
-- `app/Models/ClassEnrollment.php`, `Comment.php`, `Hashtag.php`, `Like.php`
-- `bootstrap/providers.php`
-- `config/auth.php`
-- `database/factories/ClassEnrollmentFactory.php`, `CommentFactory.php`, `FollowFactory.php`, `HashtagFactory.php`, `LikeFactory.php`, `PostFactory.php`, `ReportFactory.php`, `UserFactory.php`
+### Components
 
-### Generated assets
+`stat-card`, `chart-card`, `activity-item`, `countdown`, `avatar-stack`,
+`progress-bar`, `data-table`, `empty-state`, `class-card`, `user-card`,
+`status-badge`, `avatar`, `pagination-links`
 
-`npm run build` regenerated `public/build/manifest.json` and the hashed files under `public/build/assets/`.
+### Backend
+
+| Path | Purpose |
+| --- | --- |
+| `app/Support/DashboardMetrics.php` | All aggregates, trends, sparklines, schedule, chart series; 300 s cache |
+| `app/Http/Controllers/AdminDashboardController.php` | Admin view data |
+| `app/Http/Controllers/TeacherDashboardController.php` | Teacher view data, activity, schedule |
+| `app/Http/Controllers/StudentDashboardController.php` | Student hero, recommendations, feed preview |
+| `app/Http/Controllers/DashboardChartController.php` | JSON endpoints for the range selectors |
+
+### JavaScript
+
+`theme.js`, `charts.js`, `countdown.js`, `data-table.js`, `page-transitions.js`,
+`layout.js`, `app.js`
+
+### Routes and tests
+
+`routes/web.php` · `tests/Feature/DashboardRedesignTest.php` ·
+`tests/Feature/DashboardTest.php` · `tests/Feature/PhaseThreeUiTest.php`
 
 ---
 
 ## 3. Full code
 
-Every file below is copied verbatim from the workspace.
 
 ### `resources/sass/_variables.scss`
 
@@ -193,6 +219,8 @@ $table-border-color-dark: #1f2937;
     --edu-sidebar-width: 264px;
     --edu-sidebar-collapsed-width: 84px;
     --edu-navbar-height: 72px;
+    // Radius scale: 8 / 12 / 16 (+ 20 for large hero surfaces).
+    --edu-radius-xs: 8px;
     --edu-radius: 16px;
     --edu-radius-sm: 12px;
     --edu-radius-lg: 20px;
@@ -207,6 +235,42 @@ $table-border-color-dark: #1f2937;
     --edu-transition: 150ms ease;
     --edu-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --edu-ring: 0 0 0 0.22rem rgba(79, 70, 229, 0.22);
+
+    // --- Spacing scale (Phase 3C) ------------------------------------------
+    // Every gap in the custom components comes from one of these, so vertical
+    // rhythm stays identical from page to page. 4px steps.
+    --edu-space-1: 0.25rem; //  4px
+    --edu-space-2: 0.5rem; //   8px
+    --edu-space-3: 0.75rem; // 12px
+    --edu-space-4: 1rem; //    16px
+    --edu-space-5: 1.5rem; //  24px
+    --edu-space-6: 2rem; //    32px
+    --edu-space-7: 3rem; //    48px
+    --edu-space-8: 4rem; //    64px
+
+    // --- Type scale (Phase 3C) ---------------------------------------------
+    --edu-fs-display: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+    --edu-fs-h1: clamp(1.6rem, 1.25rem + 1.2vw, 2rem);
+    --edu-fs-h2: clamp(1.35rem, 1.15rem + 0.7vw, 1.6rem);
+    --edu-fs-h3: 1.3rem;
+    --edu-fs-h4: 1.15rem;
+    --edu-fs-h5: 1rem;
+    --edu-fs-h6: 0.9375rem;
+    --edu-fs-body: 0.9375rem;
+    --edu-fs-small: 0.8125rem;
+    --edu-fs-xs: 0.75rem;
+    --edu-measure: 70ch; // comfortable reading width
+
+    // --- Z-index layers (Phase 3C) -----------------------------------------
+    // One place to look when something overlaps something else.
+    --edu-z-base: 1;
+    --edu-z-sticky: 1020; // navbar, sticky table headers
+    --edu-z-sidebar: 1030;
+    --edu-z-dropdown: 1040;
+    --edu-z-fab: 1045; // the "new post" button
+    --edu-z-mobilenav: 1050; // bottom navigation bar
+    --edu-z-modal: 1060;
+    --edu-z-toast: 1080; // always on top
 
     --edu-sidebar-from: #11152b;
     --edu-sidebar-to: #1e1b4b;
@@ -251,6 +315,7 @@ $table-border-color-dark: #1f2937;
     --edu-chart-tooltip-bg: #f8fafc;
     --edu-chart-tooltip-text: #0f172a;
 }
+
 ```
 
 ### `resources/sass/app.scss`
@@ -741,6 +806,33 @@ button:focus-visible,
     background: var(--edu-surface-muted);
 }
 
+// Initials fallback when a user has not uploaded a photo.
+.edu-avatar-initials {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-size: 0.9em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    user-select: none;
+}
+
+.avatar-sm.edu-avatar-initials {
+    font-size: 0.68rem;
+}
+
+.avatar-lg.edu-avatar-initials {
+    font-size: 1.45rem;
+}
+
+.avatar-xl.edu-avatar-initials {
+    font-size: 1.9rem;
+}
+
 .profile-photo-preview {
     width: 96px;
     height: 96px;
@@ -773,7 +865,7 @@ button:focus-visible,
 
 .edu-main-inner {
     flex: 1 1 auto;
-    padding: 1.5rem 0 2.5rem;
+    padding: 0 0 2.5rem;
 }
 
 .edu-page {
@@ -1141,6 +1233,14 @@ button:focus-visible,
 
 .edu-navbar .dropdown-toggle::after {
     display: none;
+}
+
+// Bootstrap sets `.navbar-nav .dropdown-menu` to `position: static` outside a
+// `navbar-expand-*` container, so the user/notification menus would expand the
+// bar and push the page down. The top bar is always horizontal here, so keep
+// its menus floating above the content instead.
+.edu-navbar .navbar-nav .dropdown-menu {
+    position: absolute;
 }
 
 .edu-navbar-avatar {
@@ -1899,6 +1999,70 @@ button:focus-visible,
     overflow: hidden;
 }
 
+// --- Feed sidebar widgets ----------------------------------------------------
+.edu-widget-user {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0;
+}
+
+.edu-widget-user + .edu-widget-user {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-widget-user .edu-list-title {
+    font-size: 0.84rem;
+}
+
+.edu-widget-user .btn {
+    white-space: nowrap;
+}
+
+.edu-trending-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+.edu-trending-row + .edu-trending-row {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-trending-row:hover .edu-list-title {
+    color: var(--edu-primary);
+}
+
+.edu-trending-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.edu-post-image {
+    width: 100%;
+    max-height: 520px;
+    object-fit: cover;
+    background: var(--edu-surface-muted);
+}
+
+.edu-post-comments .avatar,
+.edu-post-comments .avatar-sm {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+}
+
 // --- Empty states ------------------------------------------------------------
 .edu-empty-illustration {
     display: inline-flex;
@@ -2138,9 +2302,770 @@ button:focus-visible,
 }
 
 // -----------------------------------------------------------------------------
-// Accessibility: honour reduced motion
+// Phase 3C — component library additions
 // -----------------------------------------------------------------------------
+// Everything below is built from the tokens in _variables.scss: same spacing
+// steps, same radii, same transitions, same z-index ladder.
 
+// Comfortable reading width for long prose (about 70 characters).
+.edu-measure {
+    max-width: var(--edu-measure);
+}
+
+// --- Button loading state ----------------------------------------------------
+// A form button that is waiting for the server: spinner in place of the label.
+.btn.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+
+    > * {
+        visibility: hidden;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1rem;
+        height: 1rem;
+        margin: -0.5rem 0 0 -0.5rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        color: #fff;
+        animation: edu-spin 0.6s linear infinite;
+    }
+}
+
+.btn-outline-primary.is-loading::after,
+.btn-outline-secondary.is-loading::after,
+.btn-light.is-loading::after {
+    color: var(--edu-primary);
+}
+
+@keyframes edu-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// --- Toasts ------------------------------------------------------------------
+// Rendered by resources/js/toast.js from the data attributes of <x-flash />.
+.edu-toast-stack {
+    position: fixed;
+    right: var(--edu-space-4);
+    bottom: var(--edu-space-4);
+    z-index: var(--edu-z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--edu-space-2);
+    width: min(360px, calc(100vw - 2 * var(--edu-space-4)));
+    pointer-events: none;
+}
+
+.edu-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--edu-space-2);
+    padding: var(--edu-space-3) var(--edu-space-4);
+    border-radius: var(--edu-radius-sm);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    pointer-events: auto;
+    animation: edu-toast-in 200ms var(--edu-ease);
+
+    .btn-close {
+        padding: 0.35rem;
+        margin-left: auto;
+    }
+}
+
+.edu-toast.is-success {
+    border-left: 4px solid var(--edu-success);
+}
+
+.edu-toast.is-error {
+    border-left: 4px solid var(--edu-danger);
+}
+
+.edu-toast.is-info {
+    border-left: 4px solid var(--edu-info);
+}
+
+@keyframes edu-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+// --- Role cards on the register page ----------------------------------------
+.edu-role-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--edu-space-3);
+    padding: var(--edu-space-3) var(--edu-space-4);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface-soft);
+    cursor: pointer;
+    transition: border-color var(--edu-transition), background-color var(--edu-transition),
+        box-shadow var(--edu-transition);
+
+    &:hover {
+        border-color: var(--edu-border-strong);
+    }
+
+    // The radio itself is hidden: the whole card is the hit area (44px+ tall).
+    input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .edu-role-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: var(--edu-radius-xs);
+        background: var(--edu-primary-soft);
+        color: var(--edu-primary);
+        font-size: 1.15rem;
+    }
+
+    // Selected state, driven by :has() plus a JS class for older browsers.
+    &:has(input:checked),
+    &.is-selected {
+        border-color: var(--edu-primary);
+        background: var(--edu-surface);
+        box-shadow: 0 0 0 1px var(--edu-primary);
+    }
+
+    &:has(input:focus-visible),
+    &.is-selected:focus-within {
+        outline: 2px solid var(--edu-primary);
+        outline-offset: 2px;
+    }
+}
+
+// --- Password strength meter -------------------------------------------------
+.edu-strength {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: var(--edu-space-2);
+}
+
+.edu-strength-track {
+    display: flex;
+    gap: 4px;
+}
+
+.edu-strength-seg {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--edu-surface-muted);
+    transition: background-color var(--edu-transition);
+}
+
+.edu-strength[data-score='1'] .edu-strength-seg:nth-child(-n + 1),
+.edu-strength[data-score='2'] .edu-strength-seg:nth-child(-n + 2) {
+    background: var(--edu-danger);
+}
+
+.edu-strength[data-score='3'] .edu-strength-seg:nth-child(-n + 3) {
+    background: var(--edu-warning);
+}
+
+.edu-strength[data-score='4'] .edu-strength-seg {
+    background: var(--edu-success);
+}
+
+// --- Mobile bottom navigation ------------------------------------------------
+.edu-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--edu-z-mobilenav);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    border-top: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    // Respect the iPhone home indicator area.
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -6px 24px -18px rgba(15, 23, 42, 0.4);
+}
+
+.edu-mobile-nav-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    // 44px minimum touch target.
+    min-width: 56px;
+    min-height: 56px;
+    flex: 1;
+    padding: 0.4rem 0.25rem;
+    font-size: var(--edu-fs-xs);
+    font-weight: 600;
+    color: var(--edu-muted);
+    text-decoration: none;
+
+    i {
+        font-size: 1.25rem;
+    }
+
+    &.active {
+        color: var(--edu-primary);
+    }
+
+    &:hover {
+        color: var(--edu-primary);
+    }
+}
+
+// The badge sits on the icon, not on the label.
+.edu-mobile-nav-badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    font-size: 0.625rem;
+    padding: 0.15em 0.4em;
+}
+
+// --- Floating "new post" button ---------------------------------------------
+.edu-fab {
+    position: fixed;
+    right: var(--edu-space-4);
+    bottom: calc(72px + env(safe-area-inset-bottom, 0));
+    z-index: var(--edu-z-fab);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--edu-primary);
+    color: #fff;
+    font-size: 1.4rem;
+    box-shadow: var(--edu-shadow-pop);
+    transition: transform var(--edu-transition), background-color var(--edu-transition);
+
+    &:hover,
+    &:focus-visible {
+        background: var(--edu-primary-dark);
+        color: #fff;
+    }
+
+    &:active {
+        transform: scale(0.94);
+    }
+}
+
+@media (min-width: 992px) {
+    .edu-fab {
+        bottom: var(--edu-space-5);
+        right: var(--edu-space-5);
+    }
+}
+
+// --- Profile cover banner ----------------------------------------------------
+.edu-cover {
+    position: relative;
+    height: 132px;
+    border-radius: var(--edu-radius) var(--edu-radius) 0 0;
+    background: linear-gradient(120deg, #312e81 0%, #4f46e5 55%, #7c3aed 100%);
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        right: -80px;
+        top: -140px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.edu-cover-avatar {
+    margin-top: -48px;
+}
+
+// --- Highlighted search match ------------------------------------------------
+// The surrounding text keeps its colour; only the matched part is marked, so
+// the highlight never hides information and always has contrast.
+.edu-mark {
+    padding: 0 0.15em;
+    border-radius: var(--edu-radius-xs);
+    background: rgba(245, 158, 11, 0.28);
+    color: inherit;
+    font-weight: 600;
+}
+
+[data-bs-theme='dark'] .edu-mark {
+    background: rgba(245, 158, 11, 0.32);
+}
+
+// --- Filter chips ------------------------------------------------------------
+.edu-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--edu-space-1);
+    padding: 0.35rem 0.75rem;
+    min-height: 36px;
+    border: 1px solid var(--edu-border);
+    border-radius: 999px;
+    background: var(--edu-surface);
+    color: var(--edu-text-soft);
+    font-size: var(--edu-fs-small);
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color var(--edu-transition), background-color var(--edu-transition),
+        color var(--edu-transition);
+
+    &:hover {
+        border-color: var(--edu-primary);
+        color: var(--edu-primary);
+    }
+
+    &.is-active {
+        border-color: var(--edu-primary);
+        background: var(--edu-primary);
+        color: #fff;
+    }
+}
+
+// --- Notification groups (Today / Earlier) -----------------------------------
+.edu-notif-group-label {
+    display: flex;
+    align-items: center;
+    gap: var(--edu-space-2);
+    margin: var(--edu-space-4) 0 var(--edu-space-2);
+    font-size: var(--edu-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--edu-muted);
+
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--edu-border);
+    }
+}
+
+.edu-notif-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--edu-primary);
+    flex-shrink: 0;
+}
+
+// --- Sticky data tables + mobile card view -----------------------------------
+.edu-table-sticky thead th {
+    position: sticky;
+    top: 0;
+    z-index: var(--edu-z-base);
+    background: var(--edu-surface);
+    box-shadow: inset 0 -1px 0 var(--edu-border);
+}
+
+// Below lg each row becomes a card. The label of every cell comes from the
+// data-label attribute, so nothing is lost when the header disappears.
+@media (max-width: 991.98px) {
+    .edu-table-cards {
+        thead {
+            display: none;
+        }
+
+        tbody tr {
+            display: block;
+            border: 1px solid var(--edu-border);
+            border-radius: var(--edu-radius-sm);
+            margin-bottom: var(--edu-space-3);
+            padding: var(--edu-space-2);
+            background: var(--edu-surface);
+        }
+
+        tbody td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--edu-space-3);
+            border: 0;
+            padding: 0.4rem 0.25rem;
+            text-align: right;
+        }
+
+        tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: var(--edu-fs-small);
+            color: var(--edu-muted);
+            text-align: left;
+        }
+    }
+}
+
+// --- Style guide helpers -----------------------------------------------------
+.edu-swatch {
+    height: 56px;
+    border-radius: var(--edu-radius-sm);
+    border: 1px solid var(--edu-border);
+}
+
+.edu-guide-block {
+    padding: var(--edu-space-4);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+}
+
+// --- Landing page (guests) ---------------------------------------------------
+.edu-landing {
+    background: var(--edu-surface);
+}
+
+.edu-landing-hero {
+    position: relative;
+    overflow: hidden;
+    padding: var(--edu-space-8) 0 var(--edu-space-7);
+    background: linear-gradient(180deg, var(--edu-surface-soft) 0%, var(--edu-surface) 100%);
+}
+
+.edu-landing-shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(6px);
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.edu-landing-shape.is-one {
+    width: 380px;
+    height: 380px;
+    top: -160px;
+    right: -120px;
+    background: radial-gradient(circle at 30% 30%, rgba(79, 70, 229, 0.35), transparent 70%);
+}
+
+.edu-landing-shape.is-two {
+    width: 320px;
+    height: 320px;
+    bottom: -180px;
+    left: -120px;
+    background: radial-gradient(circle at 60% 40%, rgba(124, 58, 237, 0.3), transparent 70%);
+}
+
+.edu-landing-title {
+    font-size: var(--edu-fs-display);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+// Mockup of the live-class screen: pure CSS, no image request.
+.edu-mockup {
+    border-radius: var(--edu-radius);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    box-shadow: var(--edu-shadow-pop);
+    overflow: hidden;
+}
+
+.edu-mockup-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: var(--edu-space-2) var(--edu-space-3);
+    border-bottom: 1px solid var(--edu-border);
+    background: var(--edu-surface-soft);
+}
+
+.edu-mockup-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--edu-border-strong);
+}
+
+.edu-mockup-stage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(140deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
+}
+
+.edu-mockup-tile {
+    position: absolute;
+    border-radius: var(--edu-radius-xs);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.edu-mockup-bar-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--edu-space-3);
+    padding: var(--edu-space-3);
+    background: var(--edu-surface-soft);
+}
+
+.edu-mockup-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--edu-surface);
+    border: 1px solid var(--edu-border);
+    color: var(--edu-text-soft);
+}
+
+.edu-step-card {
+    position: relative;
+    padding: var(--edu-space-5);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius);
+    background: var(--edu-surface);
+    height: 100%;
+}
+
+.edu-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--edu-radius-xs);
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-weight: 700;
+}
+
+.edu-feature-card {
+    padding: var(--edu-space-5);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius);
+    background: var(--edu-surface);
+    height: 100%;
+    transition: transform var(--edu-transition), box-shadow var(--edu-transition),
+        border-color var(--edu-transition);
+
+    &:hover {
+        transform: translateY(-3px);
+        border-color: var(--edu-border-strong);
+        box-shadow: var(--edu-shadow-card);
+    }
+}
+
+.edu-stats-strip {
+    border-radius: var(--edu-radius);
+    background: linear-gradient(120deg, #312e81 0%, #4f46e5 100%);
+    color: #fff;
+    padding: var(--edu-space-6) var(--edu-space-5);
+}
+
+.edu-stat-figure {
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.edu-landing-section {
+    padding: var(--edu-space-7) 0;
+}
+
+.edu-section-title {
+    font-size: var(--edu-fs-h2);
+    letter-spacing: -0.02em;
+}
+
+// A tidy accordion: no double borders, the open item is clearly marked.
+.edu-faq .accordion-item {
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+    margin-bottom: var(--edu-space-2);
+    overflow: hidden;
+}
+
+.edu-faq .accordion-button {
+    font-weight: 600;
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: none;
+
+    &:not(.collapsed) {
+        color: var(--edu-primary);
+        background: var(--edu-surface-soft);
+    }
+}
+
+.edu-landing-footer {
+    padding: var(--edu-space-6) 0 var(--edu-space-5);
+    border-top: 1px solid var(--edu-border);
+    background: var(--edu-surface-soft);
+}
+
+// On phones the bottom navigation and the floating button need room.
+@media (max-width: 991.98px) {
+    .edu-has-mobile-nav {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
+    }
+}
+
+// --- Phase 3C additions ------------------------------------------------------
+
+// Skip link: invisible until it receives keyboard focus, then a normal button.
+.edu-skip-link {
+    position: fixed;
+    top: var(--edu-space-2);
+    left: var(--edu-space-2);
+    z-index: calc(var(--edu-z-fab) + 10);
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:focus {
+        outline: 2px solid var(--edu-primary);
+        outline-offset: 2px;
+    }
+}
+
+// Sidebars that stay in view while the main column scrolls.
+.edu-sticky-aside {
+    position: static;
+}
+
+@media (min-width: 1200px) {
+    .edu-sticky-aside {
+        position: sticky;
+        top: calc(var(--edu-navbar-height) + var(--edu-space-3));
+    }
+}
+
+// Character ring in the feed composer.
+.edu-char-ring {
+    --edu-ring-progress: 0deg;
+    --edu-ring-color: var(--edu-primary);
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--edu-ring-color) var(--edu-ring-progress), var(--edu-border) 0);
+    font-size: var(--edu-fs-xs);
+    font-weight: 700;
+    color: var(--edu-muted);
+    transition: background var(--edu-transition);
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 4px;
+        border-radius: 50%;
+        background: var(--edu-surface);
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    &.is-warning {
+        --edu-ring-color: var(--edu-warning);
+    }
+
+    &.is-full {
+        --edu-ring-color: var(--edu-danger);
+    }
+}
+
+// Heart pop when a post is liked (disabled by prefers-reduced-motion).
+.edu-like-pop {
+    animation: edu-like-pop 220ms ease-out;
+}
+
+@keyframes edu-like-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    70% { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+
+// Notification row icon.
+.edu-notif-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-size: 1rem;
+
+    .notification-unread & {
+        background: var(--edu-primary);
+        color: #fff;
+    }
+}
+
+// Hashtag page hero.
+.edu-hashtag-hero {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: var(--edu-radius);
+    background: linear-gradient(135deg, var(--edu-primary) 0%, var(--edu-secondary) 100%);
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+// Admin tables: keep the post preview readable without stretching the table.
+.edu-admin-post-cell {
+    min-width: 16rem;
+    max-width: 30rem;
+
+    @media (max-width: 991.98px) {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+// Accessibility: honour the operating-system "reduce motion" setting. One
+// single media query for the whole stylesheet (Phase 3C merged the block that
+// used to be duplicated here).
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -2149,6 +3074,11 @@ button:focus-visible,
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .edu-feature-card:hover,
+    .edu-card-hover:hover {
+        transform: none;
     }
 
     .edu-page,
@@ -2160,15 +3090,18 @@ button:focus-visible,
 
     .edu-chart-skeleton span,
     .edu-skeleton,
-    .edu-live-dot {
+    .edu-live-dot,
+    .edu-toast,
+    .btn.is-loading::after {
         animation: none !important;
     }
 }
+
 ```
 
 ### `resources/js/theme.js`
 
-```js
+```javascript
 /**
  * Light / dark mode (Phase 3B).
  *
@@ -2262,11 +3195,12 @@ if (document.readyState === 'loading') {
 } else {
     bootTheme();
 }
+
 ```
 
 ### `resources/js/charts.js`
 
-```js
+```javascript
 /**
  * Themed Chart.js charts (Phase 3B).
  *
@@ -2560,11 +3494,12 @@ if (document.readyState === 'loading') {
 } else {
     bootCharts();
 }
+
 ```
 
 ### `resources/js/countdown.js`
 
-```js
+```javascript
 /**
  * Live countdown timers (Phase 3B).
  *
@@ -2646,11 +3581,12 @@ if (document.readyState === 'loading') {
 } else {
     bootCountdowns();
 }
+
 ```
 
 ### `resources/js/data-table.js`
 
-```js
+```javascript
 /**
  * Client-side search and sorting for the data tables (Phase 3B).
  *
@@ -2776,11 +3712,12 @@ if (document.readyState === 'loading') {
 } else {
     bootTables();
 }
+
 ```
 
 ### `resources/js/page-transitions.js`
 
-```js
+```javascript
 /**
  * Small page transition (Phase 3B).
  *
@@ -2868,11 +3805,75 @@ if (document.readyState === 'loading') {
 } else {
     bootTransitions();
 }
+
+```
+
+### `resources/js/layout.js`
+
+```javascript
+/**
+ * Desktop sidebar toggle (FR-31).
+ *
+ * The sidebar is an offcanvas drawer on phones and a normal column from the
+ * lg breakpoint upwards. This script only handles the desktop toggle and
+ * remembers the choice in localStorage; Bootstrap handles the mobile drawer.
+ *
+ * The layout also reads the same key in a tiny inline script in <head>, so the
+ * correct state is applied before the first paint.
+ */
+
+const STORAGE_KEY = 'educonnect.sidebar.collapsed';
+
+function isCollapsed() {
+    return document.documentElement.classList.contains('edu-sidebar-collapsed');
+}
+
+function applyState(collapsed) {
+    document.documentElement.classList.toggle('edu-sidebar-collapsed', collapsed);
+
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((button) => {
+        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+
+        const icon = button.querySelector('[data-sidebar-toggle-icon]');
+        if (icon) {
+            icon.classList.toggle('bi-layout-sidebar-inset', !collapsed);
+            icon.classList.toggle('bi-layout-sidebar', collapsed);
+        }
+    });
+}
+
+function storeState(collapsed) {
+    try {
+        window.localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
+    } catch (error) {
+        // Private browsing may block storage; the page still toggles for this visit.
+    }
+}
+
+function bootSidebarToggle() {
+    // Sync the aria attributes/icon with the state that was applied in <head>.
+    applyState(isCollapsed());
+
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const collapsed = !isCollapsed();
+            applyState(collapsed);
+            storeState(collapsed);
+        });
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootSidebarToggle);
+} else {
+    bootSidebarToggle();
+}
+
 ```
 
 ### `resources/js/app.js`
 
-```js
+```javascript
 import './bootstrap'; // axios setup (window.axios)
 
 // Bootstrap 5 JavaScript (dropdowns, modals, collapses...) + Popper
@@ -2893,6 +3894,7 @@ import './charts';
 import './countdown';
 import './data-table';
 import './page-transitions';
+import './toast';
 
 // Profile photo preview and "remove current photo" (FR-4).
 import './profile-photo';
@@ -2906,8 +3908,18 @@ import './feed';
 // Live class room: embeds Jitsi Meet through the External API (FR-18, FR-22).
 import './jitsi';
 
-// Notification bell: unread badge + newest five, refreshed by polling (FR-24).
+// Notification bell: unread badge + newest eight, refreshed by polling (FR-24)
+// and "mark as read" without a reload (FR-25).
 import './notifications';
+
+// Live search suggestions under the navbar box (FR-14).
+import './search';
+
+// Global form polish: busy submit buttons and live character counters (Phase 3C).
+import './forms';
+
+// Live preview on the create / edit class form (Phase 3C).
+import './classes';
 
 // Make them available to plain <script> tags inside Blade views.
 window.bootstrap = bootstrap;
@@ -2915,6 +3927,7 @@ window.Alpine = Alpine;
 window.Chart = Chart;
 
 Alpine.start();
+
 ```
 
 ### `resources/views/layouts/app.blade.php`
@@ -2929,10 +3942,33 @@ Alpine.start();
         <meta name="color-scheme" content="light dark">
 
         @php
-            // A page can pass <x-slot name="title">Page title</x-slot>.
+            // A page can pass <x-slot name="title">Page title</x-slot> and
+            // <x-slot name="description">Meta description</x-slot>.
             $pageTitle = isset($title) ? trim(strip_tags((string) $title)) : '';
+            $pageDescription = isset($description) && trim(strip_tags((string) $description)) !== ''
+                ? trim(strip_tags((string) $description))
+                : config('educonnect.meta.description');
+            $fullTitle = ($pageTitle !== '' ? $pageTitle.' · ' : '').config('app.name', 'EduConnect');
         @endphp
-        <title>{{ $pageTitle !== '' ? $pageTitle.' · ' : '' }}{{ config('app.name', 'EduConnect') }}</title>
+        <title>{{ $fullTitle }}</title>
+        <meta name="description" content="{{ $pageDescription }}">
+        <link rel="canonical" href="{{ url()->current() }}">
+
+        {{-- Social previews use the same title and description. --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name', 'EduConnect') }}">
+        <meta property="og:title" content="{{ $fullTitle }}">
+        <meta property="og:description" content="{{ $pageDescription }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="{{ $fullTitle }}">
+        <meta name="twitter:description" content="{{ $pageDescription }}">
+
+        {{-- Favicon and browser chrome colours (light + dark). --}}
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+        <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 
         {{-- Theme first: before the stylesheet so there is no flash of the
              wrong colour scheme. Explicit choice wins, then the OS setting. --}}
@@ -2970,19 +4006,34 @@ Alpine.start();
 
         @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     </head>
+    @php
+        // One unread counter shared by the top bar and the mobile navigation,
+        // so both badges always agree and the feed keeps its query budget.
+        $layoutUnreadCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+
+        // The public landing page uses this layout too, but a signed-in visitor
+        // should see the marketing site, not the dashboard sidebar, mobile nav
+        // or composer shortcut. Those are dashboard chrome only.
+        $isLandingPage = request()->is('/');
+    @endphp
+
     {{-- body carries the notification polling URL for logged in users (FR-24) --}}
-    <body class="edu-body d-flex flex-column min-vh-100" @auth data-notification-url="{{ route('notifications.poll') }}" @endauth>
-        <a class="visually-hidden-focusable d-inline-flex p-2 bg-white text-dark" href="#main-content">
+    <body class="edu-body d-flex flex-column min-vh-100 {{ auth()->check() && ! $isLandingPage ? 'edu-has-mobile-nav' : '' }}"
+          @auth data-notification-url="{{ route('notifications.poll') }}" @endauth>
+        <a class="visually-hidden-focusable edu-skip-link" href="#main-content" style="position:fixed;">
             {{ __('Skip to main content') }}
         </a>
 
         {{-- Sticky, blurred top navigation bar --}}
-        @include('layouts.navigation')
+        @include('layouts.navigation', ['unreadNotifications' => $layoutUnreadCount])
 
         <div class="edu-shell flex-grow-1" id="appShell">
-            {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones. --}}
+            {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones.
+                 Never on the public landing page. --}}
             @auth
-                @include('layouts.sidebar')
+                @unless ($isLandingPage)
+                    @include('layouts.sidebar')
+                @endunless
             @endauth
 
             <div class="edu-main">
@@ -3025,8 +4076,24 @@ Alpine.start();
 
         {{-- Page specific JavaScript (kept out of the markup). --}}
         @stack('scripts')
+
+        @auth
+            @unless ($isLandingPage)
+                {{-- Mobile bottom navigation: five destinations, always one tap away. --}}
+                @include('layouts.mobile-nav', ['unreadCount' => $layoutUnreadCount])
+
+                {{-- Floating composer shortcut, feed only, never over the desktop layout. --}}
+                @if (request()->routeIs('feed.index'))
+                    <a class="edu-fab d-lg-none" href="{{ route('posts.create') }}"
+                       aria-label="{{ __('New post') }}" title="{{ __('New post') }}">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    </a>
+                @endif
+            @endunless
+        @endauth
     </body>
 </html>
+
 ```
 
 ### `resources/views/layouts/navigation.blade.php`
@@ -3035,17 +4102,20 @@ Alpine.start();
 {{-- Sticky top navigation bar: page context, search, theme, notifications and
      the user menu. The sidebar itself lives in layouts/sidebar.blade.php. --}}
 @php
-    // Unread notifications drive the bell counter (FR-24); the newest five fill
-    // the dropdown. The polling script refreshes both every 45 seconds.
-    $unreadNotifications = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+    // Unread notifications drive the bell counter (FR-24); the newest eight fill
+    // the dropdown. The polling script refreshes both every 30 seconds.
+    // The layout passes the shared unread count so the mobile bar shows the
+    // same number without a second COUNT query.
+    $unreadNotifications = $unreadNotifications ?? (auth()->check() ? auth()->user()->unreadNotifications()->count() : 0);
     $latestNotifications = auth()->check()
-        ? auth()->user()->notifications()->latest()->take(5)->get()
+        ? auth()->user()->notifications()->latest()->take(8)->get()
         : collect();
 @endphp
 
 <nav class="navbar edu-navbar sticky-top">
     <div class="container-xxl px-3 px-lg-4 d-flex align-items-center gap-2">
         @auth
+            @unless ($isLandingPage ?? false)
             {{-- Opens the sidebar drawer on phones and tablets only;
                  from lg upwards the sidebar is always visible. --}}
             <button class="btn edu-icon-btn d-lg-none" type="button"
@@ -3063,6 +4133,7 @@ Alpine.start();
                     title="{{ __('Toggle the sidebar') }}">
                 <i class="bi bi-layout-sidebar-inset" data-sidebar-toggle-icon aria-hidden="true"></i>
             </button>
+            @endunless
         @endauth
 
         <a class="navbar-brand d-flex align-items-center gap-2 mb-0"
@@ -3091,9 +4162,12 @@ Alpine.start();
 
         <div class="d-flex align-items-center ms-auto gap-1 gap-md-2">
             @auth
-                {{-- One search box for people and hashtags (FR-14).
-                     On phones the box would not fit, so there is an icon instead. --}}
-                <form method="GET" action="{{ route('search.index') }}" role="search" class="edu-search d-none d-md-block">
+                {{-- One search box for people, hashtags and posts (FR-14).
+                     On phones the box would not fit, so there is an icon instead.
+                     resources/js/search.js fills the dropdown underneath it. --}}
+                <form method="GET" action="{{ route('search.index') }}" role="search"
+                      class="edu-search position-relative d-none d-md-block"
+                      data-search-form data-search-url="{{ route('search.suggest') }}">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-transparent border-0 pe-0" aria-hidden="true">
                             <i class="bi bi-search"></i>
@@ -3101,8 +4175,14 @@ Alpine.start();
                         <input type="search" name="q" class="form-control border-0"
                                value="{{ request()->routeIs('search.*') ? request('q') : '' }}"
                                placeholder="{{ __('Search people or #tags') }}"
-                               aria-label="{{ __('Search') }}">
+                               aria-label="{{ __('Search') }}"
+                               autocomplete="off" data-search-input>
                     </div>
+
+                    {{-- Live suggestions, hidden until there is something to show.
+                         resources/js/search.js toggles the "d-none" class. --}}
+                    <div class="dropdown-menu show position-absolute top-100 start-0 end-0 shadow-sm d-none"
+                         data-search-suggestions></div>
                 </form>
             @endauth
 
@@ -3123,7 +4203,7 @@ Alpine.start();
                     </a>
                 </li>
 
-                {{-- Notification bell: unread counter + newest five (FR-24) --}}
+                {{-- Notification bell: unread counter + newest eight (FR-24) --}}
                 <li class="nav-item dropdown">
                     <button class="btn edu-icon-btn position-relative" type="button"
                             data-bs-toggle="dropdown" aria-expanded="false"
@@ -3201,6 +4281,7 @@ Alpine.start();
         </div>
     </div>
 </nav>
+
 ```
 
 ### `resources/views/layouts/sidebar.blade.php`
@@ -3217,7 +4298,7 @@ Alpine.start();
     $groups = match ($role) {
         \App\Models\User::ROLE_ADMIN => [
             ['label' => 'Overview', 'items' => [
-                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'admin.dashboard'],
+                ['label' => 'Style Guide', 'icon' => 'bi-palette', 'route' => 'admin.style-guide'],
             ]],
             ['label' => 'Manage', 'items' => [
                 ['label' => 'Users', 'icon' => 'bi-people', 'route' => 'admin.users.index'],
@@ -3231,9 +4312,6 @@ Alpine.start();
             ]],
         ],
         \App\Models\User::ROLE_TEACHER => [
-            ['label' => 'Overview', 'items' => [
-                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'teacher.dashboard'],
-            ]],
             ['label' => 'Teaching', 'items' => [
                 ['label' => 'My Classes', 'icon' => 'bi-easel', 'route' => 'classes.index'],
                 ['label' => 'Create Class', 'icon' => 'bi-plus-square', 'route' => 'classes.create'],
@@ -3248,9 +4326,6 @@ Alpine.start();
             ]],
         ],
         default => [
-            ['label' => 'Overview', 'items' => [
-                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'student.dashboard'],
-            ]],
             ['label' => 'Learning', 'items' => [
                 ['label' => 'Browse Classes', 'icon' => 'bi-search', 'route' => 'classes.discover'],
                 ['label' => 'My Classes', 'icon' => 'bi-journal-bookmark', 'route' => 'student.classes'],
@@ -3376,6 +4451,84 @@ Alpine.start();
         </div>
     </div>
 </aside>
+
+```
+
+### `resources/views/layouts/mobile-nav.blade.php`
+
+```blade
+{{-- Mobile bottom navigation (Phase 3C).
+     Five destinations, each one tap away, with a 56px touch target.
+     The same information is available in the sidebar drawer; this bar simply
+     keeps the most used pages reachable with a thumb. --}}
+@php
+    $me = auth()->user();
+
+    $homeRoute = match ($me->role) {
+        \App\Models\User::ROLE_ADMIN => 'admin.dashboard',
+        \App\Models\User::ROLE_TEACHER => 'teacher.dashboard',
+        default => 'student.dashboard',
+    };
+
+    $classesRoute = match ($me->role) {
+        \App\Models\User::ROLE_ADMIN => 'admin.classes.index',
+        \App\Models\User::ROLE_TEACHER => 'classes.index',
+        default => 'classes.discover',
+    };
+
+    $items = [
+        [
+            'label' => __('Home'),
+            'icon' => 'bi-house-door',
+            'url' => route($homeRoute),
+            'active' => request()->routeIs($homeRoute),
+        ],
+        [
+            'label' => __('Classes'),
+            'icon' => 'bi-easel',
+            'url' => route($classesRoute),
+            'active' => request()->routeIs('classes.*', 'student.classes', 'admin.classes.*'),
+        ],
+        [
+            'label' => __('Search'),
+            'icon' => 'bi-search',
+            'url' => route('search.index'),
+            'active' => request()->routeIs('search.*'),
+        ],
+        [
+            'label' => __('Notifications'),
+            'icon' => 'bi-bell',
+            'url' => route('notifications.index'),
+            'active' => request()->routeIs('notifications.*'),
+            'badge' => $unreadCount,
+        ],
+        [
+            'label' => __('Profile'),
+            'icon' => 'bi-person',
+            'url' => route('users.show', $me),
+            'active' => request()->routeIs('users.show') && request()->route('user')?->is($me),
+        ],
+    ];
+@endphp
+
+<nav class="edu-mobile-nav d-lg-none" aria-label="{{ __('Mobile navigation') }}">
+    @foreach ($items as $item)
+        <a href="{{ $item['url'] }}"
+           class="edu-mobile-nav-item {{ $item['active'] ? 'active' : '' }}"
+           @if ($item['active']) aria-current="page" @endif>
+            <i class="bi {{ $item['icon'] }}" aria-hidden="true"></i>
+            <span>{{ $item['label'] }}</span>
+
+            @if (! empty($item['badge']))
+                <span class="badge rounded-pill text-bg-danger edu-mobile-nav-badge">
+                    {{ $item['badge'] > 9 ? '9+' : $item['badge'] }}
+                    <span class="visually-hidden">{{ __('unread notifications') }}</span>
+                </span>
+            @endif
+        </a>
+    @endforeach
+</nav>
+
 ```
 
 ### `resources/views/components/stat-card.blade.php`
@@ -3486,6 +4639,7 @@ Alpine.start();
         <a class="stretched-link" href="{{ $href }}" aria-label="{{ $label }}"></a>
     @endif
 </div>
+
 ```
 
 ### `resources/views/components/chart-card.blade.php`
@@ -3686,6 +4840,7 @@ Alpine.start();
         @endif
     </div>
 </div>
+
 ```
 
 ### `resources/views/components/activity-item.blade.php`
@@ -3732,6 +4887,7 @@ Alpine.start();
         @endif
     </div>
 </div>
+
 ```
 
 ### `resources/views/components/countdown.blade.php`
@@ -3785,6 +4941,7 @@ Alpine.start();
         {{ $hours }} {{ __('hours') }}, {{ $minutes }} {{ __('minutes') }}
     </span>
 </div>
+
 ```
 
 ### `resources/views/components/avatar-stack.blade.php`
@@ -3818,6 +4975,7 @@ Alpine.start();
         </span>
     @endif
 </div>
+
 ```
 
 ### `resources/views/components/progress-bar.blade.php`
@@ -3859,6 +5017,7 @@ Alpine.start();
         <div class="progress-bar bg-{{ $color }}" style="width: {{ $percent }}%"></div>
     </div>
 </div>
+
 ```
 
 ### `resources/views/components/data-table.blade.php`
@@ -3945,6 +5104,7 @@ Alpine.start();
         </div>
     @endif
 </div>
+
 ```
 
 ### `resources/views/components/empty-state.blade.php`
@@ -3982,6 +5142,7 @@ Alpine.start();
         @endif
     </div>
 </div>
+
 ```
 
 ### `resources/views/components/class-card.blade.php`
@@ -4015,7 +5176,7 @@ Alpine.start();
 
         @if ($classRoom->subject)
             <div class="mb-2">
-                <span class="badge bg-light text-dark border">
+                <span class="badge bg-body-secondary text-body border">
                     <i class="bi bi-book me-1"></i>{{ $classRoom->subject }}
                 </span>
             </div>
@@ -4043,6 +5204,12 @@ Alpine.start();
             </li>
         </ul>
 
+        {{-- Relative timing hint without JavaScript (FR-21):
+             "Live now", "Starts in 2h 15m" or "Ended". --}}
+        <p class="small fw-semibold mb-2 {{ $classRoom->isLive() ? 'text-danger' : 'text-muted' }}">
+            <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>{{ $classRoom->timelineLabel() }}
+        </p>
+
         @if ($classRoom->description)
             {{-- Description is escaped by Blade; long texts are cut off --}}
             <p class="small text-muted mb-2">{{ \Illuminate\Support\Str::limit($classRoom->description, 120) }}</p>
@@ -4054,6 +5221,7 @@ Alpine.start();
         </div>
     </div>
 </div>
+
 ```
 
 ### `resources/views/components/user-card.blade.php`
@@ -4061,23 +5229,24 @@ Alpine.start();
 ```blade
 {{-- A user (teacher or student) as a compact card.
      Usage: <x-user-card :user="$teacher"> <button>Follow</button> </x-user-card> --}}
-@props(['user'])
+@props(['user', 'nameHtml' => null])
 
 <div class="card edu-card border-0 h-100">
     <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-center gap-3 mb-2">
-            @if ($user->photoUrl())
+            @if ($user->photo)
                 {{-- Escaped attribute value; the photo lives on the public disk --}}
-                <img src="{{ $user->photoUrl() }}" alt="{{ $user->name }}" class="avatar">
+                <img src="{{ $user->photoUrl() }}" alt="{{ $user->name }}" class="avatar" loading="lazy" decoding="async">
             @else
                 {{-- Fallback: a circle with the first letter of the name --}}
-                <span class="avatar bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center justify-content-center fw-bold">
+                <span class="avatar bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center justify-content-center fw-bold"
+                      role="img" aria-label="{{ $user->name }}">
                     {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($user->name, 0, 1)) }}
                 </span>
             @endif
 
             <div>
-                <div class="fw-semibold">{{ $user->name }}</div>
+                <div class="fw-semibold">{!! $nameHtml ?? e($user->name) !!}</div>
                 <div class="small text-muted text-capitalize">
                     <i class="bi bi-person-badge me-1"></i>{{ $user->role }}
                     @if ($user->subject)
@@ -4104,6 +5273,120 @@ Alpine.start();
         </div>
     </div>
 </div>
+
+```
+
+### `resources/views/components/status-badge.blade.php`
+
+```blade
+{{-- Shared status badge for classes, reports and moderation states.
+     Usage: <x-status-badge :status="$classRoom->status" />
+            <x-status-badge status="pending" label="Waiting for review" /> --}}
+@props([
+    'status',
+    'label' => null,
+])
+
+@php
+    $status = (string) $status;
+
+    // Bootstrap colour for each state used in the application.
+    $color = match ($status) {
+        'live' => 'danger',
+        'scheduled' => 'primary',
+        'completed' => 'secondary',
+        'pending' => 'warning',
+        'reviewed' => 'info',
+        'dismissed' => 'secondary',
+        'hidden' => 'warning',
+        'blocked' => 'danger',
+        'active' => 'success',
+        default => 'secondary',
+    };
+
+    $text = $label ?? \Illuminate\Support\Str::headline($status);
+@endphp
+
+<span {{ $attributes->class(['badge', 'text-bg-'.$color, 'text-capitalize']) }}>
+    @if ($status === 'live')
+        <i class="bi bi-broadcast me-1" aria-hidden="true"></i>
+    @endif
+    {{ $text }}
+</span>
+
+```
+
+### `resources/views/components/avatar.blade.php`
+
+```blade
+{{-- Reusable avatar (FR-4, FR-5, FR-14).
+     Usage:
+       <x-avatar :user="$user" />
+       <x-avatar :user="$user" size="lg" :link="route('users.show', $user)" />
+     An uploaded photo is used when present; otherwise the circle shows the
+     user's initials, so there are no broken or anonymous silhouettes. --}}
+@props([
+    'user' => null,
+    'size' => 'md',
+    'link' => null,
+])
+
+@php
+    $sizeClass = [
+        'sm' => 'avatar-sm',
+        'md' => 'avatar',
+        'lg' => 'avatar-lg',
+        'xl' => 'avatar-xl',
+    ][$size] ?? 'avatar';
+
+    $name = $user?->name ?? __('User');
+
+    // Two initials at most: "Ada Lovelace" -> "AL", "Ada" -> "A".
+    $initials = \Illuminate\Support\Str::of($name)
+        ->squish()
+        ->explode(' ')
+        ->filter()
+        ->take(2)
+        ->map(fn ($part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))
+        ->implode('');
+
+    $photo = $user?->photo ? $user->photoUrl() : null;
+@endphp
+
+@if ($link)
+    <a href="{{ $link }}" class="d-inline-flex flex-shrink-0" aria-label="{{ $name }}">
+        @if ($photo)
+            <img src="{{ $photo }}" alt="{{ $name }}" loading="lazy" decoding="async"
+                 {{ $attributes->class([$sizeClass]) }}>
+        @else
+            <span role="img" aria-label="{{ $name }}"
+                  {{ $attributes->class(['edu-avatar-initials', $sizeClass]) }}>{{ $initials }}</span>
+        @endif
+    </a>
+@elseif ($photo)
+    <img src="{{ $photo }}" alt="{{ $name }}" loading="lazy" decoding="async"
+         {{ $attributes->class([$sizeClass]) }}>
+@else
+    <span role="img" aria-label="{{ $name }}"
+          {{ $attributes->class(['edu-avatar-initials', $sizeClass]) }}>{{ $initials }}</span>
+@endif
+
+```
+
+### `resources/views/components/pagination-links.blade.php`
+
+```blade
+{{-- Bootstrap 5 pagination links, hidden when everything fits on one page.
+     The Bootstrap views are switched on in AppServiceProvider.
+     Usage: <x-pagination-links :paginator="$classes" /> --}}
+@props(['paginator'])
+
+@if ($paginator->hasPages())
+    <nav class="mt-3 d-flex justify-content-center" aria-label="{{ __('Page navigation') }}">
+        {{ $paginator->links() }}
+    </nav>
+@endif
+
 ```
 
 ### `resources/views/dashboards/admin.blade.php`
@@ -4140,13 +5423,13 @@ Alpine.start();
                     <i class="bi bi-flag" aria-hidden="true"></i>
                     {{ __('Moderation queue') }}
                     @if ($pendingReports > 0)
-                        <span class="badge rounded-pill text-bg-light ms-1">{{ $pendingReports }}</span>
+                        <span class="badge rounded-pill bg-body-secondary text-body ms-1">{{ $pendingReports }}</span>
                     @endif
                 </a>
-                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light">
+                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-people" aria-hidden="true"></i> {{ __('Manage users') }}
                 </a>
-                <a href="{{ route('admin.posts.index') }}" class="btn btn-sm btn-light">
+                <a href="{{ route('admin.posts.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-chat-square-text" aria-hidden="true"></i> {{ __('Review posts') }}
                 </a>
             </div>
@@ -4233,7 +5516,7 @@ Alpine.start();
                             <div class="edu-list-row">
                                 <div class="flex-grow-1 min-w-0">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="badge text-bg-light border text-capitalize">{{ $report->content_type }}</span>
+                                        <span class="badge bg-body-secondary text-body border text-capitalize">{{ $report->content_type }}</span>
                                         <span class="badge text-bg-warning">{{ $report->reason_label }}</span>
                                         <span class="edu-list-meta">{{ $report->created_at?->diffForHumans() }}</span>
                                     </div>
@@ -4431,6 +5714,7 @@ Alpine.start();
         </div>
     </div>
 </x-app-layout>
+
 ```
 
 ### `resources/views/dashboards/teacher.blade.php`
@@ -4460,7 +5744,7 @@ Alpine.start();
                 <a href="{{ route('classes.create') }}" class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-lg" aria-hidden="true"></i> {{ __('Create class') }}
                 </a>
-                <a href="{{ route('classes.index') }}" class="btn btn-sm btn-light">
+                <a href="{{ route('classes.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-collection" aria-hidden="true"></i> {{ __('All my classes') }}
                 </a>
             </div>
@@ -4682,7 +5966,7 @@ Alpine.start();
                             </td>
                             <td class="text-end text-nowrap">
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-light" type="button"
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
                                             data-bs-toggle="dropdown" aria-expanded="false"
                                             aria-label="{{ __('Actions for :title', ['title' => $class->title]) }}">
                                         <i class="bi bi-three-dots" aria-hidden="true"></i>
@@ -4771,6 +6055,7 @@ Alpine.start();
         </div>
     </div>
 </x-app-layout>
+
 ```
 
 ### `resources/views/dashboards/student.blade.php`
@@ -4811,10 +6096,10 @@ Alpine.start();
                 <a href="{{ route('classes.discover') }}" class="btn btn-sm btn-primary">
                     <i class="bi bi-search" aria-hidden="true"></i> {{ __('Find a class') }}
                 </a>
-                <a href="{{ route('student.classes') }}" class="btn btn-sm btn-light">
+                <a href="{{ route('student.classes') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-journal-bookmark" aria-hidden="true"></i> {{ __('My classes') }}
                 </a>
-                <a href="{{ route('feed.index') }}" class="btn btn-sm btn-light">
+                <a href="{{ route('feed.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-chat-square-text" aria-hidden="true"></i> {{ __('Open feed') }}
                 </a>
             </div>
@@ -5030,7 +6315,7 @@ Alpine.start();
                                 <x-user-card :user="$teacher">
                                     {{-- AJAX follow when JS is on, a normal POST otherwise. --}}
                                     @include('users._follow-button', ['user' => $teacher])
-                                    <a href="{{ route('users.show', $teacher) }}" class="btn btn-sm btn-light">
+                                    <a href="{{ route('users.show', $teacher) }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-person me-1" aria-hidden="true"></i> {{ __('Profile') }}
                                     </a>
                                 </x-user-card>
@@ -5180,7 +6465,7 @@ Alpine.start();
                                     </div>
                                 </div>
 
-                                <a href="{{ route('posts.show', $post) }}" class="btn btn-sm btn-light flex-shrink-0"
+                                <a href="{{ route('posts.show', $post) }}" class="btn btn-sm btn-outline-secondary flex-shrink-0"
                                    aria-label="{{ __('Open this post') }}">
                                     <i class="bi bi-arrow-right" aria-hidden="true"></i>
                                 </a>
@@ -5203,6 +6488,7 @@ Alpine.start();
         </div>
     </div>
 </x-app-layout>
+
 ```
 
 ### `app/Support/DashboardMetrics.php`
@@ -5216,6 +6502,7 @@ use App\Models\ClassEnrollment;
 use App\Models\ClassRoom;
 use App\Models\Follow;
 use App\Models\Post;
+use App\Models\Report;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -5272,6 +6559,19 @@ class DashboardMetrics
                 'classes' => ClassRoom::query()->count(),
             ];
         });
+    }
+
+    /**
+     * Pending reports badge on the admin dashboard (FR-33).
+     * The queue itself stays uncached; only this small counter is.
+     */
+    public function adminPendingReports(): int
+    {
+        return (int) Cache::remember(
+            'dashboard.admin.pending-reports.v1',
+            self::TTL_SECONDS,
+            static fn (): int => Report::query()->pending()->count()
+        );
     }
 
     /**
@@ -5772,6 +7072,7 @@ class DashboardMetrics
         ];
     }
 }
+
 ```
 
 ### `app/Http/Controllers/AdminDashboardController.php`
@@ -5820,8 +7121,8 @@ class AdminDashboardController extends Controller
                 ->take(5)
                 ->get(['id', 'name', 'email', 'role', 'photo', 'created_at']),
 
-            // Moderation shortcuts (FR-33): pending counter + newest five.
-            'pendingReports' => Report::query()->pending()->count(),
+            // Moderation shortcuts (FR-33): cached pending counter + newest five.
+            'pendingReports' => $metrics->adminPendingReports(),
             'recentReports' => Report::query()
                 ->pending()
                 ->with(['reporter:id,name', 'reportable'])
@@ -5849,6 +7150,7 @@ class AdminDashboardController extends Controller
         ]);
     }
 }
+
 ```
 
 ### `app/Http/Controllers/TeacherDashboardController.php`
@@ -6024,6 +7326,7 @@ class TeacherDashboardController extends Controller
             ->values();
     }
 }
+
 ```
 
 ### `app/Http/Controllers/StudentDashboardController.php`
@@ -6197,6 +7500,7 @@ class StudentDashboardController extends Controller
             ->get();
     }
 }
+
 ```
 
 ### `app/Http/Controllers/DashboardChartController.php`
@@ -6252,6 +7556,7 @@ class DashboardChartController extends Controller
         ]);
     }
 }
+
 ```
 
 ### `routes/web.php`
@@ -6307,6 +7612,10 @@ Route::middleware(['auth', 'not.blocked', 'role:admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('/dashboard', AdminDashboardController::class)->name('dashboard');
+
+        // Phase 3C: living documentation of the design system. Admin only,
+        // because it is a maintenance page rather than a product feature.
+        Route::view('/style-guide', 'admin.style-guide')->name('style-guide');
 
         // Phase 3B: JSON series for the dashboard range selector.
         Route::get('/dashboard/charts', [DashboardChartController::class, 'admin'])
@@ -6378,11 +7687,11 @@ Route::middleware(['auth', 'not.blocked', 'role:student'])
 Route::middleware(['auth', 'not.blocked', 'role:student,teacher'])
     ->group(function () {
         Route::post('/u/{user}/follow', [FollowController::class, 'store'])
-            ->middleware('throttle:30,1')
+            ->middleware('throttle:follows')
             ->name('follows.store');
 
         Route::delete('/u/{user}/follow', [FollowController::class, 'destroy'])
-            ->middleware('throttle:30,1')
+            ->middleware('throttle:follows')
             ->name('follows.destroy');
     });
 
@@ -6399,7 +7708,7 @@ Route::middleware(['auth', 'not.blocked'])->group(function () {
     Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
     // At most 10 new posts per minute per user (FR-9).
     Route::post('/posts', [PostController::class, 'store'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:posts')
         ->name('posts.store');
     Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
     Route::get('/posts/{post}/edit', [PostController::class, 'edit'])->name('posts.edit');
@@ -6408,31 +7717,34 @@ Route::middleware(['auth', 'not.blocked'])->group(function () {
 
     // Likes - small JSON endpoints for the fetch() calls in the feed (FR-11).
     Route::post('/posts/{post}/like', [LikeController::class, 'store'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:likes')
         ->name('posts.like');
     Route::delete('/posts/{post}/like', [LikeController::class, 'destroy'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:likes')
         ->name('posts.unlike');
 
     // Comments (FR-13).
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:comments')
         ->name('comments.store');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:comments')
         ->name('comments.destroy');
 
     // Reporting a post or comment (FR-32). Throttled so the queue cannot be
     // flooded by one account.
     Route::post('/posts/{post}/reports', [ReportController::class, 'storePost'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:reports')
         ->name('reports.posts.store');
     Route::post('/comments/{comment}/reports', [ReportController::class, 'storeComment'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:reports')
         ->name('reports.comments.store');
 
-    // Hashtag pages (FR-15). The binding uses the (lower case) name column.
-    Route::get('/hashtag/{hashtag:name}', [HashtagController::class, 'show'])->name('hashtags.show');
+    // Hashtag pages (FR-13). The binding uses the (lower case) name column.
+    // /hashtags/{name} is the canonical URL; the old singular address remains
+    // available so earlier links keep working.
+    Route::get('/hashtags/{hashtag:name}', [HashtagController::class, 'show'])->name('hashtags.show');
+    Route::get('/hashtag/{hashtag:name}', [HashtagController::class, 'show'])->name('hashtags.legacy');
 
     // Public profiles and the follower lists (FR-5, FR-11).
     Route::get('/users/{user}', [UserProfileController::class, 'show'])->name('users.show');
@@ -6501,33 +7813,39 @@ Route::middleware(['auth', 'not.blocked', 'role:student'])->group(function () {
 |--------------------------------------------------------------------------
 | Notifications (FR-23 ... FR-25)
 |--------------------------------------------------------------------------
-| The bell in the navbar polls /notifications/poll every 45 seconds and gets
-| the fresh unread counter plus the newest five entries as JSON.
+| The bell in the navbar polls /notifications/poll every 30 seconds and gets
+| the fresh unread counter plus the newest eight entries as JSON.
 */
 Route::middleware(['auth', 'not.blocked'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
     // Lightweight JSON endpoint for the polling script (FR-24).
     Route::get('/notifications/poll', [NotificationController::class, 'poll'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:notifications-poll')
         ->name('notifications.poll');
 
     // Mark everything as read (FR-25). Declared before the {notification} routes.
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
-    // One notification: mark it read, or mark it read and open its page (FR-25).
+    // One notification: mark it read, open its page, or delete it (FR-25).
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 });
 
 /*
 |--------------------------------------------------------------------------
 | Search (FR-14)
 |--------------------------------------------------------------------------
-| One box in the navbar, two tabs on the page: people and hashtags.
+| One box in the navbar, three tabs on the page: people, hashtags and posts.
 */
 Route::middleware(['auth', 'not.blocked'])->group(function () {
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+
+    // Debounced live suggestions for the navbar dropdown (FR-14).
+    Route::get('/search/suggest', [SearchController::class, 'suggest'])
+        ->middleware('throttle:search-suggest')
+        ->name('search.suggest');
 });
 
 /*
@@ -6542,6 +7860,7 @@ Route::middleware(['auth', 'not.blocked'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
 ```
 
 ### `tests/Feature/DashboardRedesignTest.php`
@@ -6807,92 +8126,728 @@ class DashboardRedesignTest extends TestCase
         $this->assertCount(1, $response->viewData('feedPreview'));
     }
 }
+
+```
+
+### `tests/Feature/DashboardTest.php`
+
+```php
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\ClassRoom;
+use App\Models\Post;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Phase 3: the three role dashboards (FR-2, FR-19, FR-20, FR-21, FR-22, FR-31).
+ */
+class DashboardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /* ---------------------------------------------------------------
+     | Role isolation
+     * --------------------------------------------------------------- */
+
+    /**
+     * Every role only reaches its own dashboard (FR-2, FR-5).
+     */
+    public function test_each_role_is_locked_out_of_the_other_dashboards(): void
+    {
+        // A teacher cannot open the admin or the student dashboard.
+        $teacher = User::factory()->teacher()->create();
+        $this->actingAs($teacher)->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($teacher)->get('/student/dashboard')->assertForbidden();
+
+        // A student cannot open the admin or the teacher dashboard.
+        $student = User::factory()->student()->create();
+        $this->actingAs($student)->get('/admin/dashboard')->assertForbidden();
+        $this->actingAs($student)->get('/teacher/dashboard')->assertForbidden();
+
+        // An admin cannot open the teacher or the student dashboard.
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get('/teacher/dashboard')->assertForbidden();
+        $this->actingAs($admin)->get('/student/dashboard')->assertForbidden();
+    }
+
+    /* ---------------------------------------------------------------
+     | Admin dashboard
+     * --------------------------------------------------------------- */
+
+    /**
+     * The admin cards show the real platform totals (FR-7).
+     */
+    public function test_the_admin_dashboard_shows_the_platform_totals(): void
+    {
+        $admin = User::factory()->admin()->create();
+        User::factory()->count(2)->teacher()->create();
+        $students = User::factory()->count(3)->student()->create();
+
+        Post::factory()->create(['user_id' => $students->first()->id]);
+        ClassRoom::factory()->create(['teacher_id' => User::where('role', User::ROLE_TEACHER)->first()->id]);
+
+        $response = $this->actingAs($admin)->get('/admin/dashboard');
+
+        $response->assertOk();
+        $response->assertViewHas('stats', fn (array $stats) => $stats === [
+            'users' => 6,       // 1 admin + 2 teachers + 3 students
+            'teachers' => 2,
+            'students' => 3,
+            'posts' => 1,
+            'classes' => 1,
+        ]);
+    }
+
+    /**
+     * The chart covers exactly 12 months, keeps the months in order and fills
+     * months without registrations with 0 (FR-31).
+     */
+    public function test_the_admin_chart_counts_new_users_per_month(): void
+    {
+        // Freeze time so the 12 month window is predictable.
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+
+        $admin = User::factory()->admin()->create();
+        User::factory()->count(2)->create();          // 3 registrations in June 2026
+
+        $this->travelTo(Carbon::parse('2026-04-10 09:00:00'));
+        User::factory()->count(2)->create();          // 2 registrations in April 2026
+
+        $this->travelTo(Carbon::parse('2025-01-01 09:00:00'));
+        User::factory()->create();                    // outside the window -> ignored
+
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+
+        $response = $this->actingAs($admin)->get('/admin/dashboard');
+        $response->assertOk();
+
+        $chart = $response->viewData('chart');
+
+        // 12 months, oldest first: July 2025 ... June 2026.
+        $this->assertCount(12, $chart['labels']);
+        $this->assertSame('Jul 2025', $chart['labels'][0]);
+        $this->assertSame('Jun 2026', $chart['labels'][11]);
+
+        // April 2026 is index 9, June 2026 is index 11.
+        $this->assertSame(2, $chart['values'][9]);
+        $this->assertSame(3, $chart['values'][11]);
+
+        // Months without new users are 0, not missing.
+        $this->assertSame(0, $chart['values'][0]);
+        $this->assertSame(0, $chart['values'][10]);
+
+        // The user from January 2025 is not part of the last 12 months.
+        $this->assertSame(5, $chart['total']);
+
+        // The canvas that app.js turns into a chart is on the page.
+        $response->assertSee('data-chart', false);
+    }
+
+    /* ---------------------------------------------------------------
+     | Teacher dashboard
+     * --------------------------------------------------------------- */
+
+    /**
+     * The teacher cards only count the teacher's own content (FR-22).
+     */
+    public function test_the_teacher_dashboard_only_counts_my_own_content(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $otherTeacher = User::factory()->teacher()->create();
+
+        // Two of my classes: one still ahead, one already finished.
+        $upcoming = $this->makeClass($teacher, 'scheduled');
+        $finished = $this->makeClass($teacher, 'completed');
+
+        // A class that belongs to somebody else and must stay invisible.
+        $this->makeClass($otherTeacher, 'scheduled', 'Secret other class');
+
+        // Two students, one of them enrolled in both of my classes.
+        [$sina, $paul] = User::factory()->count(2)->student()->create()->all();
+        $upcoming->students()->attach([$sina->id, $paul->id]);
+        $finished->students()->attach($sina->id);
+
+        // Both students follow me.
+        $sina->follow($teacher);
+        $paul->follow($teacher);
+
+        $response = $this->actingAs($teacher)->get('/teacher/dashboard');
+
+        $response->assertOk();
+        $response->assertViewHas('stats', fn (array $stats) => $stats === [
+            'classes' => 2,
+            'upcoming' => 1,
+            'students' => 2,   // Sina counts once, even though she is in two classes
+            'followers' => 2,
+        ]);
+
+        // The table only lists my classes.
+        $classes = $response->viewData('classes');
+        $this->assertSame(2, $classes->total());
+        $response->assertDontSee('Secret other class', false);
+        $this->assertStringNotContainsString('Secret other class', $response->getContent());
+
+        // The activity stream reports the new followers (FR-25).
+        $response->assertSee('started following you');
+    }
+
+    /* ---------------------------------------------------------------
+     | Student dashboard
+     * --------------------------------------------------------------- */
+
+    /**
+     * The student dashboard lists the enrolled upcoming classes, the correct
+     * counters and only teachers that are not followed yet (FR-19, FR-20, FR-21).
+     */
+    public function test_the_student_dashboard_shows_upcoming_classes_and_teacher_suggestions(): void
+    {
+        $student = User::factory()->student()->create();
+
+        $followed = User::factory()->teacher()->create();
+        $suggested = User::factory()->teacher()->create();
+        $alsoSuggested = User::factory()->teacher()->create();
+        $student->follow($followed);
+
+        // I am enrolled in an upcoming and in a finished class of $followed.
+        $upcoming = $this->makeClass($followed, 'scheduled');
+        $finished = $this->makeClass($followed, 'completed');
+        $upcoming->students()->attach($student->id);
+        $finished->students()->attach($student->id);
+
+        // An upcoming class I am NOT enrolled in: it must not be listed.
+        $notMine = $this->makeClass($suggested, 'scheduled');
+
+        $response = $this->actingAs($student)->get('/student/dashboard');
+
+        $response->assertOk();
+        $response->assertViewHas('stats', fn (array $stats) => $stats === [
+            'classes' => 2,
+            'upcoming' => 1,
+            'following' => 1,
+        ]);
+
+        // Only the upcoming class I am enrolled in is listed.
+        $upcomingClasses = $response->viewData('upcomingClasses');
+        $this->assertSame([$upcoming->id], $upcomingClasses->pluck('id')->all());
+        $this->assertNotContains($finished->id, $upcomingClasses->pluck('id')->all());
+        $this->assertNotContains($notMine->id, $upcomingClasses->pluck('id')->all());
+
+        // Teachers I do not follow yet are recommended, the followed one is not.
+        $recommended = $response->viewData('recommendedTeachers')->pluck('id')->all();
+        $this->assertEqualsCanonicalizing([$suggested->id, $alsoSuggested->id], $recommended);
+        $this->assertNotContains($followed->id, $recommended);
+
+        // The Join button is on the page (it becomes a real link in Phase 5).
+        $response->assertSee('Join');
+    }
+
+    /* ---------------------------------------------------------------
+     | Follow / unfollow (FR-11)
+     * --------------------------------------------------------------- */
+
+    /**
+     * A student can follow and unfollow a teacher.
+     */
+    public function test_a_student_can_follow_and_unfollow_a_teacher(): void
+    {
+        $student = User::factory()->student()->create();
+        $teacher = User::factory()->teacher()->create();
+
+        $this->actingAs($student)
+            ->post(route('follows.store', $teacher))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('follows', [
+            'follower_id' => $student->id,
+            'following_id' => $teacher->id,
+        ]);
+
+        // Following twice does not create a second row.
+        $this->actingAs($student)->post(route('follows.store', $teacher))->assertRedirect();
+        $this->assertDatabaseCount('follows', 1);
+
+        $this->actingAs($student)
+            ->delete(route('follows.destroy', $teacher))
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('follows', 0);
+    }
+
+    /**
+     * Members can follow each other, but never themselves and never an admin.
+     */
+    public function test_a_student_can_follow_another_student_but_not_themselves_or_an_admin(): void
+    {
+        $student = User::factory()->student()->create();
+        $otherStudent = User::factory()->student()->create();
+        $admin = User::factory()->admin()->create();
+
+        // FR-11: following is not limited to teachers.
+        $this->actingAs($student)
+            ->post(route('follows.store', $otherStudent))
+            ->assertRedirect();
+
+        // Following yourself is forbidden.
+        $this->actingAs($student)
+            ->post(route('follows.store', $student))
+            ->assertForbidden();
+
+        // Admin accounts are not followable -> treated as not found.
+        $this->actingAs($student)
+            ->post(route('follows.store', $admin))
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('follows', 1);
+    }
+
+    /**
+     * Teachers can use the follow routes, admins cannot.
+     */
+    public function test_teachers_can_follow_but_admins_cannot(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $student = User::factory()->student()->create();
+        $admin = User::factory()->admin()->create();
+
+        // A teacher may follow a student (FR-11: users follow users).
+        $this->actingAs($teacher)
+            ->post(route('follows.store', $student))
+            ->assertRedirect();
+
+        // The admin area is not part of the social graph.
+        $this->actingAs($admin)
+            ->post(route('follows.store', $teacher))
+            ->assertForbidden();
+    }
+
+    /* ---------------------------------------------------------------
+     | Error pages
+     * --------------------------------------------------------------- */
+
+    /**
+     * The custom Bootstrap error pages are in place.
+     */
+    public function test_the_custom_error_pages_are_rendered(): void
+    {
+        // A guest asking for a page that does not exist.
+        $this->get('/this-page-does-not-exist')
+            ->assertNotFound()
+            ->assertSee('Page not found');
+
+        // A student opening an admin page.
+        $this->actingAs(User::factory()->student()->create())
+            ->get('/admin/dashboard')
+            ->assertForbidden()
+            ->assertSee('You are not allowed to open this page');
+
+        // The 500 page is rendered directly (the debug page replaces it while
+        // APP_DEBUG is on, so it cannot be triggered through a request).
+        $this->view('errors.500')->assertSee('500');
+    }
+
+    /* ---------------------------------------------------------------
+     | Helpers
+     * --------------------------------------------------------------- */
+
+    /**
+     * Build a class for a teacher with a predictable status and title.
+     */
+    private function makeClass(User $teacher, string $status, ?string $title = null): ClassRoom
+    {
+        $factory = match ($status) {
+            ClassRoom::STATUS_LIVE => ClassRoom::factory()->live(),
+            ClassRoom::STATUS_COMPLETED => ClassRoom::factory()->completed(),
+            default => ClassRoom::factory()->scheduled(),
+        };
+
+        $attributes = ['teacher_id' => $teacher->id];
+
+        if ($title) {
+            $attributes['title'] = $title;
+        }
+
+        return $factory->create($attributes);
+    }
+}
+
+```
+
+### `tests/Feature/PhaseThreeUiTest.php`
+
+```php
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\ClassRoom;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+/**
+ * Phase 3: layout, reusable components, dashboards and profile pages
+ * (FR-4, FR-5, FR-26, FR-29, FR-30, FR-31).
+ */
+class PhaseThreeUiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /* ---------------------------------------------------------------
+     | Layout and sidebar (FR-31)
+     * --------------------------------------------------------------- */
+
+    public function test_the_layout_remembers_the_sidebar_state_and_has_a_script_stack(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+
+        $response = $this->actingAs($teacher)->get(route('teacher.dashboard'));
+
+        $response->assertOk()
+            // Top navbar controls, including the desktop toggle.
+            ->assertSee('data-sidebar-toggle', false)
+            ->assertSee('data-bs-target="#appSidebar"', false)
+            // The state is restored before the first paint and stored by layout.js.
+            ->assertSee('educonnect.sidebar.collapsed', false)
+            // The layout provides a footer and a scripts stack.
+            ->assertSee('Learn together, anywhere.')
+            ->assertDontSee('@stack', false);
+    }
+
+    public function test_each_role_gets_the_links_it_needs_in_the_sidebar(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Users')
+            ->assertSee('Posts')
+            ->assertSee('Classes')
+            ->assertSee('Reports');
+
+        $teacher = User::factory()->teacher()->create();
+        $this->actingAs($teacher)->get(route('teacher.dashboard'))
+            ->assertOk()
+            ->assertSee('My Classes')
+            ->assertSee('Create Class')
+            ->assertSee('Feed')
+            ->assertSee('My Profile')
+            ->assertSee(route('users.show', $teacher), false);
+
+        $student = User::factory()->student()->create();
+        $this->actingAs($student)->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('Browse Classes')
+            ->assertSee('My Classes')
+            ->assertSee('Feed')
+            ->assertSee('My Profile')
+            ->assertSee(route('users.show', $student), false);
+    }
+
+    public function test_the_active_sidebar_link_is_marked_for_the_current_page(): void
+    {
+        $student = User::factory()->student()->create();
+
+        $this->actingAs($student)->get(route('student.dashboard'))
+            ->assertOk()
+            ->assertSee('aria-current="page"', false);
+    }
+
+    public function test_a_page_can_set_its_own_title_and_breadcrumbs(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('profile.edit'))
+            ->assertOk()
+            // <title> uses the page title plus the app name.
+            ->assertSee('<title>Profile settings · EduConnect</title>', false)
+            // The layout renders the breadcrumb trail from the slot.
+            ->assertSee('aria-label="Breadcrumb"', false)
+            ->assertSee('breadcrumb-item active', false)
+            ->assertSee('Profile settings');
+
+        // The public profile uses the same slots.
+        $this->actingAs($user)->get(route('users.show', $user))
+            ->assertOk()
+            ->assertSee('<title>My profile · EduConnect</title>', false)
+            ->assertSee('aria-label="Breadcrumb"', false);
+    }
+
+    /* ---------------------------------------------------------------
+     | Admin dashboard (FR-26)
+     * --------------------------------------------------------------- */
+
+    public function test_the_admin_dashboard_lists_the_newest_users(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $newest = User::factory()->teacher()->create(['name' => 'Newest Teacher']);
+
+        $response = $this->actingAs($admin)->get(route('admin.dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Recent users')
+            ->assertSee('Newest Teacher')
+            ->assertSee($newest->email);
+
+        // The table is capped at five rows.
+        $response->assertViewHas('recentUsers', fn ($users) => $users->count() <= 5);
+    }
+
+    /* ---------------------------------------------------------------
+     | Teacher dashboard (FR-29)
+     * --------------------------------------------------------------- */
+
+    public function test_the_teacher_dashboard_has_class_actions_and_enrollment_activity(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $student = User::factory()->student()->create(['name' => 'Enrolled Student']);
+
+        $classRoom = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Algebra II',
+        ]);
+        $classRoom->students()->attach($student->id);
+
+        $response = $this->actingAs($teacher)->get(route('teacher.dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Actions')
+            ->assertSee('Algebra II')
+            ->assertSee(route('classes.edit', $classRoom), false)
+            ->assertSee(route('classes.students', $classRoom), false)
+            // The activity stream includes the new enrollment.
+            ->assertSee('Enrolled Student')
+            ->assertSee('enrolled in');
+    }
+
+    /* ---------------------------------------------------------------
+     | Student dashboard (FR-30)
+     * --------------------------------------------------------------- */
+
+    public function test_the_student_join_button_is_disabled_until_the_class_is_live(): void
+    {
+        $student = User::factory()->student()->create();
+        $teacher = User::factory()->teacher()->create();
+
+        $scheduled = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
+        $scheduled->students()->attach($student->id);
+
+        $response = $this->actingAs($student)->get(route('student.dashboard'));
+
+        $response->assertOk()
+            ->assertSee('Join')
+            ->assertSee('aria-disabled="true"', false)
+            ->assertSee('disabled', false);
+    }
+
+    /* ---------------------------------------------------------------
+     | Public profile (FR-5)
+     * --------------------------------------------------------------- */
+
+    public function test_the_public_profile_uses_the_canonical_users_url_and_keeps_u_as_a_redirect(): void
+    {
+        $viewer = User::factory()->student()->create();
+        $profile = User::factory()->teacher()->create(['name' => 'Visible Teacher']);
+
+        $this->actingAs($viewer)
+            ->get('/users/'.$profile->id)
+            ->assertOk()
+            ->assertSee('Visible Teacher')
+            ->assertSee('followers')
+            ->assertSee('following')
+            ->assertSee('Posts');
+
+        $this->actingAs($viewer)
+            ->get('/u/'.$profile->id)
+            ->assertRedirect(route('users.show', $profile));
+    }
+
+    /* ---------------------------------------------------------------
+     | Profile photo (FR-4)
+     * --------------------------------------------------------------- */
+
+    public function test_a_user_can_upload_and_remove_a_profile_photo(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->teacher()->create();
+
+        // Upload: the file is stored on the public disk and the column is set.
+        $this->actingAs($user)->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'subject' => 'Mathematics',
+            'bio' => 'I like numbers.',
+            'photo' => UploadedFile::fake()->image('avatar.jpg', 300, 300),
+        ])->assertSessionHasNoErrors()->assertRedirect('/profile');
+
+        $user->refresh();
+        $this->assertNotNull($user->photo);
+        Storage::disk('public')->assertExists($user->photo);
+
+        // Remove: the checkbox clears the column and deletes the old file.
+        $oldPhoto = $user->photo;
+
+        $this->actingAs($user)->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'remove_photo' => '1',
+        ])->assertSessionHasNoErrors()->assertRedirect('/profile');
+
+        $this->assertNull($user->refresh()->photo);
+        Storage::disk('public')->assertMissing($oldPhoto);
+    }
+
+    public function test_the_profile_photo_is_validated_for_type_and_size(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        // A PDF is not an image.
+        $this->actingAs($user)->from('/profile')->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'photo' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
+        ])->assertSessionHasErrors('photo');
+
+        // A real image above the 2 MB limit is refused as well.
+        $this->actingAs($user)->from('/profile')->patch('/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'photo' => UploadedFile::fake()->image('huge.jpg')->size(3000),
+        ])->assertSessionHasErrors('photo');
+
+        $this->assertNull($user->refresh()->photo);
+    }
+
+    public function test_the_profile_form_shows_the_preview_and_remove_controls(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create([
+            'photo' => 'profiles/existing.jpg',
+        ]);
+        Storage::disk('public')->put($user->photo, 'fake image');
+
+        $this->actingAs($user)->get('/profile')
+            ->assertOk()
+            ->assertSee('data-photo-form', false)
+            ->assertSee('data-photo-preview', false)
+            ->assertSee('data-photo-input', false)
+            ->assertSee('data-photo-remove', false)
+            ->assertSee('Remove current photo');
+    }
+
+    /* ---------------------------------------------------------------
+     | Reusable components
+     * --------------------------------------------------------------- */
+
+    public function test_the_reusable_blade_components_render(): void
+    {
+        $user = User::factory()->create(['name' => 'Component User']);
+
+        $avatar = (string) Blade::render('<x-avatar :user="$user" size="lg" />', ['user' => $user]);
+        $this->assertStringContainsString('avatar-lg', $avatar);
+        $this->assertStringContainsString('Component User', $avatar);
+
+        $badge = (string) Blade::render('<x-status-badge status="live" />');
+        $this->assertStringContainsString('text-bg-danger', $badge);
+        $this->assertStringContainsString('Live', $badge);
+
+        $empty = (string) Blade::render('<x-empty-state icon="bi-inbox" title="Nothing here" message="Come back later." />');
+        $this->assertStringContainsString('Nothing here', $empty);
+        $this->assertStringContainsString('Come back later.', $empty);
+
+        $modal = (string) Blade::render(
+            '<x-confirm-delete-modal id="demo-delete" action="/demo" title="Delete demo?" message="Really?" />'
+        );
+        $this->assertStringContainsString('id="demo-delete"', $modal);
+        $this->assertStringContainsString('method="POST"', $modal);
+        $this->assertStringContainsString('name="_method" value="DELETE"', $modal);
+    }
+}
+
 ```
 
 ---
 
-## 4. Exact commands
+## 4. Commands
 
 ### First-time setup
 
 ```bash
 composer install
 npm install
-cp .env.example .env
+cp .env.example .env          # PowerShell: Copy-Item .env.example .env
 php artisan key:generate
 ```
 
-On Windows PowerShell use `Copy-Item .env.example .env` instead of `cp`.
-
-### Database and assets
+### Database, assets, server
 
 ```bash
 php artisan migrate:fresh --seed
-npm run build
+npm run build                 # or: npm run dev
 php artisan serve
 ```
 
-Open `http://127.0.0.1:8000`.
-
-### Local run against a throwaway SQLite database
-
-PowerShell:
-
-```powershell
-$env:DB_CONNECTION = "sqlite"
-$env:DB_DATABASE = "C:/Users/HomePC/AppData/Local/Temp/opencode/educonnect.sqlite"
-php artisan migrate:fresh --seed
-npm run build
-php artisan serve --host=127.0.0.1 --port=8010
-```
-
-Bash:
+### Rebuild and verify
 
 ```bash
-DB_CONNECTION=sqlite \
-DB_DATABASE="C:/Users/HomePC/AppData/Local/Temp/opencode/educonnect.sqlite" \
-php artisan migrate:fresh --seed
-
+vendor/bin/pint --test app tests routes config database
 npm run build
-DB_CONNECTION=sqlite \
-DB_DATABASE="C:/Users/HomePC/AppData/Local/Temp/opencode/educonnect.sqlite" \
-php artisan serve --host=127.0.0.1 --port=8010
-```
-
-### Quality gate
-
-```bash
-vendor/bin/pint --test
-npm run build
-php artisan view:cache
-php artisan view:clear
+php artisan view:cache && php artisan view:clear
 php artisan test --compact
+php artisan test tests/Feature/DashboardTest.php \
+                 tests/Feature/DashboardRedesignTest.php \
+                 tests/Feature/PhaseThreeUiTest.php
 ```
 
 Current result:
 
 ```text
-Tests:    198 passed (949 assertions)
+Tests:    266 passed (1,401 assertions)
+Phase 3:  26 passed (235 assertions)  [dashboards + UI]
 Pint:     passed
-Vite:     built successfully
+Vite:     139 modules, built successfully
 Views:    cached and cleared successfully
 ```
 
 ### Demo logins
 
-- Teachers: `teacher1@educonnect.test` / `password` (also `teacher2`, `teacher3`)
-- Students: `student1@educonnect.test` / `password` (also `student2` … `student6`)
-- Admin: `admin@educonnect.test` / `EduConnect#Admin2026!`
+- Admin — `admin@educonnect.test` / `EduConnect#Admin2026!`
+- Teachers — `teacher1@educonnect.test` … `teacher3@educonnect.test` / `password`
+- Students — `student1@educonnect.test` … `student6@educonnect.test` / `password`
 
 ### Chart endpoints
 
 ```text
-GET /admin/dashboard/charts?range=7d|30d|12m
-GET /teacher/dashboard/charts?range=7d|30d|12m
-GET /student/dashboard/charts?range=7d|30d|12m
+GET /admin/dashboard/charts?range=7d|30d|12m    admin.dashboard.charts
+GET /teacher/dashboard/charts?range=7d|30d|12m  teacher.dashboard.charts
+GET /student/dashboard/charts?range=7d|30d|12m  student.dashboard.charts
 ```
 
-All three are inside the existing role middleware groups.
+Each sits inside its role's existing middleware group (`auth`, `not.blocked`,
+`role:…`), so series cannot leak across roles. Responses are keyed by the
+`series-key` used by the page (`newUsers`, `posts`, `roles`, `classes`,
+`enrollments`, `followers`, `activity`).
+
+### Performance notes
+
+- `DashboardMetrics` caches every aggregate set for 300 seconds with
+  role/user-scoped keys (`dashboard.admin.*`, `dashboard.teacher.{id}.*`,
+  `dashboard.student.{id}.*`).
+- Admin totals are one `SUM(CASE …)` query instead of five counts.
+- Teacher table uses `withCount('students')`; the enrollment ceiling is one
+  grouped query.
+- Student recommendations use a `whereNotIn` sub-query, eager-load
+  `teacher:id,name,subject,photo`, and limit to 3 / 6 / 3 rows.
+- Chart series are computed from one grouped query per series and zero-filled
+  in PHP, so empty periods still render.
 
 ---
 
@@ -6903,7 +8858,7 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 ### Shared shell — every role
 
 - [ ] Sidebar uses the dark indigo→violet gradient, not a flat colour.
-- [ ] Group headings (`Overview`, `Teaching`, `Learning`, `Community`, `Account`, …) are small and uppercase.
+- [ ] Group headings (`Overview`, `Teaching`, `Learning`, `Community`, `Account`) are small and uppercase.
 - [ ] The current page has a soft tinted background **and** a visible left indicator bar.
 - [ ] On desktop the collapse button hides labels and leaves readable icons; the state survives a reload.
 - [ ] On phones the hamburger opens the offcanvas drawer; the close button is visible and focusable.
@@ -6913,18 +8868,16 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 - [ ] Global search works on desktop; the search icon appears on phones.
 - [ ] The theme toggle switches light/dark instantly, updates its icon and survives a reload.
 - [ ] With no stored choice, the page follows `prefers-color-scheme`.
-- [ ] The bell shows the unread badge and opens the newest five notifications.
+- [ ] The bell shows the unread badge and opens the newest notifications.
 - [ ] The avatar menu opens, contains profile settings and logout, and closes on outside click.
-- [ ] The footer contains `Learn together, anywhere.`
 - [ ] Cards use a 16 px radius, 1 px soft border and subtle shadow.
-- [ ] Hover over a card lifts it by 2 px with a stronger shadow in ~150 ms.
+- [ ] Hovering a card lifts it ~2 px with a stronger shadow in ~150 ms.
 - [ ] Primary, light, outline and soft buttons line up and have visible hover/focus states.
 - [ ] Icon-only buttons have a visible focus ring and a 44 px touch target on phones.
-- [ ] Tables scroll horizontally instead of breaking the layout on 360 px.
+- [ ] Tables scroll horizontally instead of breaking the layout at 360 px.
 - [ ] Modals, dropdowns and alerts follow the dark theme.
-- [ ] `prefers-reduced-motion` removes the page fade and hover movement.
-- [ ] The page fades in on load and fades out briefly before an in-app link.
-- [ ] No horizontal scrollbar appears at 360 px.
+- [ ] `prefers-reduced-motion` removes page fade and hover movement.
+- [ ] No horizontal scrollbar at 360 px.
 
 ### Admin dashboard
 
@@ -6932,14 +8885,14 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 - [ ] Today’s date is visible under the greeting.
 - [ ] Quick actions link to the moderation queue, users and posts.
 - [ ] Five stat cards: total users, teachers, students, posts, classes.
-- [ ] Each card has a coloured icon circle, a large number, `vs last month` and a mini sparkline.
+- [ ] Each card has a coloured icon circle, a big tabular number, `vs last month` and a mini sparkline.
 - [ ] `New users per month` is an indigo area line with a soft gradient.
-- [ ] The new-users range select offers 7 days / 30 days / 12 months.
+- [ ] The range select offers 7 days / 30 days / 12 months.
 - [ ] Changing the range shows the skeleton, then updates labels and values without a reload.
 - [ ] `Users by role` is a doughnut with a readable legend.
 - [ ] `Posts per week` is a bar chart with rounded bars.
-- [ ] `Classes by status` is a doughnut and shows scheduled / live / completed.
-- [ ] Chart text remains readable in dark mode.
+- [ ] `Classes by status` is a doughnut showing scheduled / live / completed.
+- [ ] Chart text stays readable in dark mode and charts re-render on toggle.
 - [ ] Pending reports show type, reason, excerpt, reporter and relative time.
 - [ ] Hide and Dismiss buttons are present and labelled for screen readers.
 - [ ] The empty moderation state says the queue is clear.
@@ -6951,7 +8904,7 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 ### Teacher dashboard
 
 - [ ] The hero shows the next scheduled (or currently live) class.
-- [ ] The hero includes title, subject, date, time, duration and teacher context.
+- [ ] The hero includes title, subject, date, time, duration and context.
 - [ ] A live countdown ticks every second for a scheduled class.
 - [ ] A live class shows the pulsing `Live now` chip instead of a countdown.
 - [ ] The enrolled avatar stack overlaps correctly and shows `+N` when needed.
@@ -6959,7 +8912,7 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 - [ ] With no class, the hero is replaced by a create-class call to action.
 - [ ] Four stat cards: my classes, upcoming, enrolled students, followers.
 - [ ] Growth percentages appear next to the relevant cards.
-- [ ] The seven-day schedule strip highlights today and colours days that have classes.
+- [ ] The seven-day strip highlights today and colours days with classes.
 - [ ] `Enrollments per class` is a bar chart.
 - [ ] `Follower growth` is a line chart with a gradient.
 - [ ] Both charts have working range selects and skeleton states.
@@ -6976,60 +8929,60 @@ Use this list for the manual pass at **360 px, 768 px, 1200 px and 1920 px**.
 - [ ] The hero shows the next enrolled scheduled class (or a live one).
 - [ ] The hero includes teacher, subject, date, time, duration and classmates.
 - [ ] A live countdown ticks for a scheduled class.
-- [ ] The `Join` button is visibly disabled with `aria-disabled="true"` until the class is live.
-- [ ] When the class is live the button becomes a real `Join live` link.
+- [ ] `Join` is visibly disabled with `aria-disabled="true"` until the class is live.
+- [ ] When live, the button becomes a real `Join live` link.
 - [ ] Four stat cards: enrolled classes, upcoming, teachers followed, notifications.
 - [ ] The notifications card links to the notification list.
 - [ ] Upcoming classes render as cards with status badge, teacher and student count.
-- [ ] The scheduled-card `Join` is disabled; the `Details` link is always available.
+- [ ] The scheduled-card `Join` is disabled; `Details` is always available.
 - [ ] The upcoming empty state offers a browse-classes action.
 - [ ] Recommended teachers show name, role, subject and follower count.
-- [ ] `Follow` posts through the existing AJAX helper and flips to `Following` without a reload.
+- [ ] `Follow` posts through the AJAX helper and flips to `Following` without a reload.
 - [ ] Recommended classes come from followed teachers or studied subjects.
 - [ ] The recommended-class `+` button posts to the enrollment route.
-- [ ] The recommended empty states explain how to get suggestions.
+- [ ] Both recommendation empty states explain how to get suggestions.
 - [ ] `Learning activity` renders as a bar chart with a working range select.
 - [ ] The feed preview shows exactly the three newest posts from followed users.
 - [ ] Each preview has author, relative time, excerpt, likes, comments and a post link.
 - [ ] `Open full feed` links to the feed.
-- [ ] With no followed users, the feed preview shows a find-people empty state.
+- [ ] With no followed users, the preview shows a find-people empty state.
 
 ### Responsive spot checks
 
-- [ ] **360 px:** one-column cards, no horizontal page scroll, 44 px buttons, full-width table scroll, countdown fits inside the hero.
-- [ ] **768 px:** two-column stat cards, sidebar still offcanvas, charts keep their aspect ratio.
+- [ ] **360 px:** single-column cards, no horizontal page scroll, 44 px buttons, scrolling tables, countdown fits inside the hero.
+- [ ] **768 px:** two stat cards per row, sidebar still offcanvas, charts keep aspect ratio.
 - [ ] **1200 px:** sidebar visible, navbar title/breadcrumbs visible, two-column chart/panel rhythm.
-- [ ] **1920 px:** content is capped by `container-xxl`, wider sidebar and roomier cards without stretching text lines.
+- [ ] **1920 px:** content capped by `container-xxl`, roomier cards, text lines stay readable.
 
 ---
 
 ## 6. Done when
 
-- [x] The design tokens and global stylesheet compile with Vite.
-- [x] The shared layout, navbar and sidebar render the Phase 3 test strings and attributes.
-- [x] Admin, Teacher and Student dashboards are rebuilt with the Phase 3B sections.
-- [x] Admin keeps exactly `users, teachers, students, posts, classes` in `stats`.
-- [x] Admin keeps the 12-month `chart` shape and values.
-- [x] Teacher keeps exactly `classes, upcoming, students, followers` in `stats`.
-- [x] Teacher keeps the `classes` paginator and `activity` collection.
-- [x] Student keeps exactly `classes, upcoming, following` in `stats`.
-- [x] Student keeps the `upcomingClasses` and `recommendedTeachers` collections.
-- [x] The scheduled student `Join` keeps `aria-disabled="true"` and `disabled`.
-- [x] The chart endpoints exist under the correct role middleware.
-- [x] Chart range changes fetch JSON and update in place with a skeleton state.
-- [x] The theme toggle persists to `localStorage` and respects `prefers-color-scheme`.
-- [x] The desktop sidebar state persists to `localStorage`.
-- [x] Cards, badges, buttons, forms, tables, modals and dropdowns share the new system.
-- [x] Empty states, text chart fallbacks, focus rings, ARIA labels and reduced motion are in place.
-- [x] Aggregates/charts are cached for 300 seconds; lists use eager loading and counts.
-- [x] `vendor/bin/pint --test` passes.
-- [x] `npm run build` passes.
+- [x] Design tokens and global stylesheet compile with Vite; light and dark share one token set.
+- [x] Sidebar: gradient, grouped headings, icons, active bar, desktop collapse with localStorage, mobile offcanvas, user mini-card.
+- [x] Navbar: sticky with blur, page title + breadcrumbs, global search, theme toggle, bell with badge, avatar dropdown.
+- [x] Theme toggle writes `educonnect.theme`, respects `prefers-color-scheme`, and paints before first paint.
+- [x] Page transitions and skeleton loaders are present and reduced-motion safe.
+- [x] Admin: greeting + date + quick actions; five stat cards with trend and sparkline; four themed charts; 7d/30d/12m fetch ranges; pending reports with Hide/Dismiss; recent users; latest posts; today’s live classes.
+- [x] Teacher: next-class hero with countdown and avatar stack; four stat cards with growth; seven-day schedule; classes table with progress bars and action dropdown; enrollment bar + follower line; activity timeline.
+- [x] Student: next-class hero with live-gated Join; four stat cards; upcoming card grid; AJAX-follow recommended teachers; recommended classes; learning-activity chart; three-post feed preview.
+- [x] All eight shared components exist and are reused rather than duplicated.
+- [x] Charts have text fallbacks (`visually-hidden` + `noscript`) and ARIA labels.
+- [x] Icon-only controls labelled; focus rings visible; 44 px targets on phones; `prefers-reduced-motion` honoured.
+- [x] Aggregates cached 300 s with scoped keys; eager loading and `withCount` throughout; no N+1 in the dashboard paths.
+- [x] All earlier dashboard contracts preserved; scheduled `Join` still disabled with `aria-disabled`.
+- [x] `vendor/bin/pint --test` passes on application code.
+- [x] `npm run build` succeeds (139 modules).
 - [x] `php artisan view:cache` compiles every view.
-- [x] `php artisan test --compact` passes: **198 passed, 949 assertions**.
-- [ ] Manual visual sign-off at 360 / 768 / 1200 / 1920 px in a real browser (no browser automation is installed in this environment).
+- [x] `php artisan test` → **266 passed, 1,401 assertions**.
+- [ ] Manual visual sign-off at 360 / 768 / 1200 / 1920 px in a real browser (no browser automation installed here).
 
 ### Environment limits (not code gaps)
 
-- MySQL 8 is not installed here, so the MySQL migration and `mysqldump` path were not executed. The code uses portable `whereDate` / `whereTime` / `SUM(CASE …)` queries and is covered on SQLite.
-- No Playwright/Puppeteer is available, so the four viewport checks are a manual checklist rather than an automated screenshot suite.
-- Real SMTP delivery, production queue workers and load/availability testing were not part of this phase.
+- MySQL 8 is not installed here, so the MySQL migration path was not executed.
+  Queries use portable `whereDate` / `whereTime` / `SUM(CASE …)` and the suite
+  runs on SQLite `:memory:`.
+- No Playwright/Puppeteer is available, so the four viewport checks remain a
+  manual checklist rather than an automated screenshot suite.
+- Real SMTP delivery, production queue workers and load testing are out of
+  scope for this phase.

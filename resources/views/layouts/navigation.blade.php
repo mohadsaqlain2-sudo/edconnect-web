@@ -94,12 +94,15 @@
 
             <ul class="navbar-nav flex-row align-items-center gap-1">
             @auth
-                {{-- Phone shortcut to the search page --}}
+                {{-- Phone search: the icon expands a full-width panel under the
+                     navbar instead of leaving the page (Phase 3D). --}}
                 <li class="nav-item d-md-none">
-                    <a class="btn edu-icon-btn" href="{{ route('search.index') }}"
-                       aria-label="{{ __('Search') }}">
+                    <button class="btn edu-icon-btn" type="button"
+                            data-mobile-search-toggle
+                            aria-expanded="false" aria-controls="mobileSearchPanel"
+                            aria-label="{{ __('Search') }}" title="{{ __('Search') }}">
                         <i class="bi bi-search" aria-hidden="true"></i>
-                    </a>
+                    </button>
                 </li>
 
                 {{-- Notification bell: unread counter + newest eight (FR-24) --}}
@@ -179,4 +182,33 @@
             </ul>
         </div>
     </div>
+
+    @auth
+        {{-- The expanded phone search. The panel is outside the flex row so it
+             can use the full viewport width; layout.js moves focus into it. --}}
+        <div class="edu-search-mobile d-md-none" id="mobileSearchPanel" hidden>
+            <div class="container-xxl px-3 px-lg-4">
+                <form method="GET" action="{{ route('search.index') }}" role="search"
+                      class="edu-search-mobile-form position-relative"
+                      data-search-form data-search-url="{{ route('search.suggest') }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0" aria-hidden="true">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="search" name="q" class="form-control border-start-0"
+                               value="{{ request()->routeIs('search.*') ? request('q') : '' }}"
+                               placeholder="{{ __('Search people or #tags') }}"
+                               aria-label="{{ __('Search') }}"
+                               autocomplete="off" data-search-input>
+                        <button class="btn btn-primary" type="submit">{{ __('Search') }}</button>
+                    </div>
+
+                    {{-- Suggestions are filled by resources/js/search.js. --}}
+                    <div class="dropdown-menu w-100 mt-1 shadow d-none"
+                         data-search-suggestions role="listbox"
+                         aria-label="{{ __('Search suggestions') }}"></div>
+                </form>
+            </div>
+        </div>
+    @endauth
 </nav>

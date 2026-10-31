@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class Post extends Model
 {
@@ -132,5 +135,43 @@ class Post extends Model
     public function likedBy(?User $user): bool
     {
         return $this->isLikedBy($user);
+    }
+
+    /**
+     * Intrinsic width and height of the attached image, if it exists.
+     *
+     * The values are cached per file because the dimensions never change after
+     * the upload service has written the file. Blade uses them as width/height
+     * attributes, so the feed reserves the correct box before the image loads
+     * (no layout shift) and can provide a truthful srcset width descriptor.
+     *
+     * @return array{width: int, height: int}|null
+     */
+    public function imageDimensions(): ?array
+    {
+        if (! $this->image) {
+            return null;
+        }
+
+        return Cache::rememberForever('post-image-dimensions:'.$this->image, function (): ?array {
+            try {
+                $disk = Storage::disk('public');
+
+                if (! $disk->exists($this->image)) {
+                    return null;
+                }
+
+                $size = @getimagesize($disk->path($this->image));
+
+                if (! $size || $size[0] < 1 || $size[1] < 1) {
+                    return null;
+                }
+
+                return ['width' => (int) $size[0], 'height' => (int) $size[1]];
+            } catch (Throwable) {
+                // A remote/fake disk or a missing GD build must not break a page.
+                return null;
+            }
+        });
     }
 }

@@ -2773,3 +2773,8 @@ button:focus-visible,
         animation: none !important;
     }
 }
+
+// -----------------------------------------------------------------------------
+// Phase 3D — responsive layer (imported last on purpose)
+// -----------------------------------------------------------------------------
+@import 'responsive';
