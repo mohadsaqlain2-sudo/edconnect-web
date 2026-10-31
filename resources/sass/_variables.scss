@@ -1,0 +1,190 @@
+// -----------------------------------------------------------------------------
+// EduConnect design tokens (Phase 3B)
+// -----------------------------------------------------------------------------
+// Everything here is imported before Bootstrap, so these are real Bootstrap
+// overrides as well as the CSS custom properties used by the custom components.
+// -----------------------------------------------------------------------------
+
+// --- Brand palette -----------------------------------------------------------
+$primary: #4f46e5; // indigo
+$secondary: #7c3aed; // violet
+$success: #10b981;
+$info: #0ea5e9;
+$warning: #f59e0b;
+$danger: #ef4444;
+$light: #f8fafc;
+$dark: #0f172a;
+
+// --- Typography --------------------------------------------------------------
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji';
+$font-size-base: 0.9375rem; // 15px, a little tighter than Bootstrap's 16px
+$line-height-base: 1.6;
+$headings-font-weight: 700;
+$headings-line-height: 1.25;
+$small-font-size: 0.8125rem;
+
+// --- Shape -------------------------------------------------------------------
+$border-radius: 0.625rem;
+$border-radius-sm: 0.5rem;
+$border-radius-lg: 0.875rem;
+$border-radius-xl: 1rem;
+$border-radius-2xl: 1.25rem;
+$card-border-radius: 1rem;
+$card-border-width: 1px;
+$card-border-color: #e7eaf0;
+$card-cap-bg: transparent;
+$card-bg: #ffffff;
+$modal-content-border-radius: 1rem;
+$dropdown-border-radius: 0.75rem;
+$dropdown-padding-y: 0.4rem;
+$btn-border-radius: 0.625rem;
+$btn-border-radius-sm: 0.5rem;
+$btn-border-radius-lg: 0.75rem;
+$input-border-radius: 0.625rem;
+$input-btn-focus-width: 0.2rem;
+
+// --- Surfaces (Bootstrap 5.3 dark mode) -------------------------------------
+$body-bg: #f5f7fb;
+$body-color: #0f172a;
+$body-secondary-color: #64748b;
+$body-bg-dark: #0b1020;
+$body-color-dark: #e5e7eb;
+$body-secondary-color-dark: #94a3b8;
+$border-color-dark: #1f2937;
+$card-bg-dark: #111827;
+$card-border-color-dark: #1f2937;
+$modal-content-bg-dark: #111827;
+$dropdown-bg-dark: #111827;
+$dropdown-border-color-dark: #1f2937;
+$input-bg-dark: #0f172a;
+$input-border-color-dark: #263244;
+$table-color-dark: #e5e7eb;
+$table-border-color-dark: #1f2937;
+
+// --- CSS custom properties ---------------------------------------------------
+// These are the tokens used by the hand-written components. They intentionally
+// mirror Bootstrap's theme so a single data-bs-theme switch restyles the app.
+:root {
+    --edu-primary: #4f46e5;
+    --edu-primary-rgb: 79, 70, 229;
+    --edu-primary-dark: #3730a3;
+    --edu-primary-soft: rgba(79, 70, 229, 0.1);
+    --edu-secondary: #7c3aed;
+    --edu-success: #10b981;
+    --edu-warning: #f59e0b;
+    --edu-danger: #ef4444;
+    --edu-info: #0ea5e9;
+
+    --edu-page-bg: #f5f7fb;
+    --edu-surface: #ffffff;
+    --edu-surface-raised: #ffffff;
+    --edu-surface-soft: #f8fafc;
+    --edu-surface-muted: #f1f5f9;
+    --edu-border: #e7eaf0;
+    --edu-border-strong: #d8dee9;
+    --edu-text: #0f172a;
+    --edu-text-soft: #334155;
+    --edu-muted: #64748b;
+    --edu-muted-strong: #475569;
+
+    --edu-sidebar-width: 264px;
+    --edu-sidebar-collapsed-width: 84px;
+    --edu-navbar-height: 72px;
+    // Radius scale: 8 / 12 / 16 (+ 20 for large hero surfaces).
+    --edu-radius-xs: 8px;
+    --edu-radius: 16px;
+    --edu-radius-sm: 12px;
+    --edu-radius-lg: 20px;
+
+    --edu-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --edu-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04),
+        0 10px 28px -18px rgba(15, 23, 42, 0.28);
+    --edu-shadow-hover: 0 2px 4px rgba(15, 23, 42, 0.05),
+        0 22px 44px -22px rgba(15, 23, 42, 0.35);
+    --edu-shadow-pop: 0 18px 45px -18px rgba(15, 23, 42, 0.28);
+
+    --edu-transition: 150ms ease;
+    --edu-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --edu-ring: 0 0 0 0.22rem rgba(79, 70, 229, 0.22);
+
+    // --- Spacing scale (Phase 3C) ------------------------------------------
+    // Every gap in the custom components comes from one of these, so vertical
+    // rhythm stays identical from page to page. 4px steps.
+    --edu-space-1: 0.25rem; //  4px
+    --edu-space-2: 0.5rem; //   8px
+    --edu-space-3: 0.75rem; // 12px
+    --edu-space-4: 1rem; //    16px
+    --edu-space-5: 1.5rem; //  24px
+    --edu-space-6: 2rem; //    32px
+    --edu-space-7: 3rem; //    48px
+    --edu-space-8: 4rem; //    64px
+
+    // --- Type scale (Phase 3C) ---------------------------------------------
+    --edu-fs-display: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+    --edu-fs-h1: clamp(1.6rem, 1.25rem + 1.2vw, 2rem);
+    --edu-fs-h2: clamp(1.35rem, 1.15rem + 0.7vw, 1.6rem);
+    --edu-fs-h3: 1.3rem;
+    --edu-fs-h4: 1.15rem;
+    --edu-fs-h5: 1rem;
+    --edu-fs-h6: 0.9375rem;
+    --edu-fs-body: 0.9375rem;
+    --edu-fs-small: 0.8125rem;
+    --edu-fs-xs: 0.75rem;
+    --edu-measure: 70ch; // comfortable reading width
+
+    // --- Z-index layers (Phase 3C) -----------------------------------------
+    // One place to look when something overlaps something else.
+    --edu-z-base: 1;
+    --edu-z-sticky: 1020; // navbar, sticky table headers
+    --edu-z-sidebar: 1030;
+    --edu-z-dropdown: 1040;
+    --edu-z-fab: 1045; // the "new post" button
+    --edu-z-mobilenav: 1050; // bottom navigation bar
+    --edu-z-modal: 1060;
+    --edu-z-toast: 1080; // always on top
+
+    --edu-sidebar-from: #11152b;
+    --edu-sidebar-to: #1e1b4b;
+    --edu-sidebar-text: #c7cbe0;
+    --edu-sidebar-heading: #7c86a8;
+    --edu-sidebar-active: rgba(129, 140, 248, 0.16);
+    --edu-sidebar-hover: rgba(255, 255, 255, 0.06);
+    --edu-sidebar-border: rgba(255, 255, 255, 0.08);
+
+    --edu-chart-grid: rgba(100, 116, 139, 0.16);
+    --edu-chart-tick: #64748b;
+    --edu-chart-tooltip-bg: #0f172a;
+    --edu-chart-tooltip-text: #f8fafc;
+}
+
+[data-bs-theme='dark'] {
+    --edu-page-bg: #0b1020;
+    --edu-surface: #111827;
+    --edu-surface-raised: #151d2f;
+    --edu-surface-soft: #0f172a;
+    --edu-surface-muted: #172033;
+    --edu-border: #1f2937;
+    --edu-border-strong: #2b3a50;
+    --edu-text: #e5e7eb;
+    --edu-text-soft: #cbd5e1;
+    --edu-muted: #94a3b8;
+    --edu-muted-strong: #a8b5c7;
+
+    --edu-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --edu-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35),
+        0 18px 34px -24px rgba(0, 0, 0, 0.8);
+    --edu-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.45),
+        0 28px 48px -26px rgba(0, 0, 0, 0.9);
+    --edu-shadow-pop: 0 18px 45px -18px rgba(0, 0, 0, 0.85);
+
+    --edu-primary-soft: rgba(129, 140, 248, 0.16);
+    --edu-sidebar-from: #070b18;
+    --edu-sidebar-to: #14123a;
+
+    --edu-chart-grid: rgba(148, 163, 184, 0.14);
+    --edu-chart-tick: #94a3b8;
+    --edu-chart-tooltip-bg: #f8fafc;
+    --edu-chart-tooltip-text: #0f172a;
+}

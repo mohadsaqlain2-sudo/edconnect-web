@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="color-scheme" content="light dark">
+
+        @php
+            // A page can pass <x-slot name="title">Page title</x-slot> and
+            // <x-slot name="description">Meta description</x-slot>.
+            $pageTitle = isset($title) ? trim(strip_tags((string) $title)) : '';
+            $pageDescription = isset($description) && trim(strip_tags((string) $description)) !== ''
+                ? trim(strip_tags((string) $description))
+                : config('educonnect.meta.description');
+            $fullTitle = ($pageTitle !== '' ? $pageTitle.' · ' : '').config('app.name', 'EduConnect');
+        @endphp
+        <title>{{ $fullTitle }}</title>
+        <meta name="description" content="{{ $pageDescription }}">
+        <link rel="canonical" href="{{ url()->current() }}">
+
+        {{-- Social previews use the same title and description. --}}
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="{{ config('app.name', 'EduConnect') }}">
+        <meta property="og:title" content="{{ $fullTitle }}">
+        <meta property="og:description" content="{{ $pageDescription }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="{{ $fullTitle }}">
+        <meta name="twitter:description" content="{{ $pageDescription }}">
+
+        {{-- Favicon and browser chrome colours (light + dark). --}}
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+        <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+
+        {{-- Theme first: before the stylesheet so there is no flash of the
+             wrong colour scheme. Explicit choice wins, then the OS setting. --}}
+        <script>
+            (function () {
+                try {
+                    var stored = window.localStorage.getItem('educonnect.theme');
+                    var theme = stored === 'dark' || stored === 'light'
+                        ? stored
+                        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    document.documentElement.setAttribute('data-bs-theme', theme);
+                } catch (error) {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                }
+            })();
+        </script>
+
+        {{-- Apply the remembered desktop sidebar state before the first paint,
+             so the layout does not jump when JavaScript finishes loading. --}}
+        <script>
+            try {
+                if (window.localStorage.getItem('educonnect.sidebar.collapsed') === '1') {
+                    document.documentElement.classList.add('edu-sidebar-collapsed');
+                }
+            } catch (error) {
+                // Private browsing can refuse localStorage; the default open
+                // sidebar is a perfectly fine fallback.
+            }
+        </script>
+
+        {{-- Inter is loaded from Google Fonts (allowed by the phase brief). --}}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+        @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    </head>
+    @php
+        // One unread counter shared by the top bar and the mobile navigation,
+        // so both badges always agree and the feed keeps its query budget.
+        $layoutUnreadCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+    @endphp
+
+    {{-- body carries the notification polling URL for logged in users (FR-24) --}}
+    <body class="edu-body d-flex flex-column min-vh-100 {{ auth()->check() ? 'edu-has-mobile-nav' : '' }}"
+          @auth data-notification-url="{{ route('notifications.poll') }}" @endauth>
+        <a class="visually-hidden-focusable edu-skip-link" href="#main-content" style="position:fixed;">
+            {{ __('Skip to main content') }}
+        </a>
+
+        {{-- Sticky, blurred top navigation bar --}}
+        @include('layouts.navigation', ['unreadNotifications' => $layoutUnreadCount])
+
+        <div class="edu-shell flex-grow-1" id="appShell">
+            {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones. --}}
+            @auth
+                @include('layouts.sidebar')
+            @endauth
+
+            <div class="edu-main">
+                <main class="edu-main-inner" id="main-content">
+                    <div class="container-xxl px-3 px-lg-4">
+                        {{-- Success / error / validation messages --}}
+                        <x-flash />
+
+                        {{-- Page header supplied by the view. Breadcrumbs live in
+                             the top bar, so this only renders when a page has one. --}}
+                        @isset($header)
+                            <div class="edu-page-header mb-4">
+                                {{ $header }}
+                            </div>
+                        @endisset
+                    </div>
+
+                    {{-- Page body. The CSS fades this in; page-transitions.js adds
+                         the matching fade-out when a link is followed. --}}
+                    <div class="edu-page">
+                        {{ $slot }}
+                    </div>
+                </main>
+
+                <footer class="edu-footer mt-auto">
+                    <div class="container-xxl px-3 px-lg-4">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                            <span>
+                                &copy; {{ date('Y') }} {{ config('app.name', 'EduConnect') }}
+                            </span>
+                            <span class="d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-mortarboard-fill text-edu" aria-hidden="true"></i>
+                                {{ __('Learn together, anywhere.') }}
+                            </span>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+
+        {{-- Page specific JavaScript (kept out of the markup). --}}
+        @stack('scripts')
+
+        @auth
+            {{-- Mobile bottom navigation: five destinations, always one tap away. --}}
+            @include('layouts.mobile-nav', ['unreadCount' => $layoutUnreadCount])
+
+            {{-- Floating composer shortcut, feed only, never over the desktop layout. --}}
+            @if (request()->routeIs('feed.index'))
+                <a class="edu-fab d-lg-none" href="{{ route('posts.create') }}"
+                   aria-label="{{ __('New post') }}" title="{{ __('New post') }}">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                </a>
+            @endif
+        @endauth
+    </body>
+</html>

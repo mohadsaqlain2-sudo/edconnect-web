@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="i1yCvcRwU2TlqZvQRkJLWCiW1e9Kcl8nnWHb29Gz">
+        <meta name="color-scheme" content="light dark">
+
+                <title>Learn together, anywhere · EduConnect</title>
+        <meta name="description" content="EduConnect brings live video classes, a friendly social feed with posts and hashtags, and one-click class enrolment together for teachers and students.">
+        <link rel="canonical" href="http://localhost">
+
+        
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="EduConnect">
+        <meta property="og:title" content="Learn together, anywhere · EduConnect">
+        <meta property="og:description" content="EduConnect brings live video classes, a friendly social feed with posts and hashtags, and one-click class enrolment together for teachers and students.">
+        <meta property="og:url" content="http://localhost">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="Learn together, anywhere · EduConnect">
+        <meta name="twitter:description" content="EduConnect brings live video classes, a friendly social feed with posts and hashtags, and one-click class enrolment together for teachers and students.">
+
+        
+        <link rel="icon" href="http://localhost/favicon.ico" sizes="any">
+        <link rel="apple-touch-icon" href="http://localhost/favicon.ico">
+        <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+
+        
+        <script>
+            (function () {
+                try {
+                    var stored = window.localStorage.getItem('educonnect.theme');
+                    var theme = stored === 'dark' || stored === 'light'
+                        ? stored
+                        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    document.documentElement.setAttribute('data-bs-theme', theme);
+                } catch (error) {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                }
+            })();
+        </script>
+
+        
+        <script>
+            try {
+                if (window.localStorage.getItem('educonnect.sidebar.collapsed') === '1') {
+                    document.documentElement.classList.add('edu-sidebar-collapsed');
+                }
+            } catch (error) {
+                // Private browsing can refuse localStorage; the default open
+                // sidebar is a perfectly fine fallback.
+            }
+        </script>
+
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+        <link rel="preload" as="style" href="http://localhost/build/assets/app-i1d9KH0-.css" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/app-IBjY_nWS.js" /><link rel="stylesheet" href="http://localhost/build/assets/app-i1d9KH0-.css" /><script type="module" src="http://localhost/build/assets/app-IBjY_nWS.js"></script>    </head>
+    
+    
+    <body class="edu-body d-flex flex-column min-vh-100 "
+          >
+        <a class="visually-hidden-focusable edu-skip-link" href="#main-content">
+            Skip to main content
+        </a>
+
+        
+        <nav class="navbar edu-navbar sticky-top">
+    <div class="container-xxl px-3 px-lg-4 d-flex align-items-center gap-2">
+        
+        <a class="navbar-brand d-flex align-items-center gap-2 mb-0"
+           href="http://localhost">
+            <span class="edu-sidebar-logo-mark d-lg-none" aria-hidden="true">
+                <span class="text-primary text-white">
+    <i class="bi bi-mortarboard-fill"></i>
+</span>
+            </span>
+            <span class="d-none d-sm-inline">EduConnect</span>
+        </a>
+
+        
+                    <div class="d-none d-xl-flex flex-column ms-3 ps-3 border-start" style="border-color: var(--edu-border) !important;">
+                                    <span class="edu-navbar-title">Learn together, anywhere</span>
+                
+                            </div>
+        
+        <div class="d-flex align-items-center ms-auto gap-1 gap-md-2">
+            
+            
+            <button class="btn edu-icon-btn" type="button" data-theme-toggle
+                    aria-label="Switch to dark mode" title="Switch to dark mode"
+                    aria-pressed="false">
+                <i class="bi bi-moon-stars" data-theme-icon aria-hidden="true"></i>
+            </button>
+
+            <ul class="navbar-nav flex-row align-items-center gap-1">
+                            
+                <li class="nav-item">
+                    <a class="btn btn-sm btn-outline-secondary" href="http://localhost/login">Log in</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-sm btn-primary" href="http://localhost/register">Register</a>
+                </li>
+                        </ul>
+        </div>
+    </div>
+</nav>
+
+        <div class="edu-shell flex-grow-1" id="appShell">
+            
+            
+            <div class="edu-main">
+                <main class="edu-main-inner" id="main-content">
+                    <div class="container-xxl px-3 px-lg-4">
+                        
+                        
+                        
+                                            </div>
+
+                    
+                    <div class="edu-page">
+                        <div class="edu-landing">
+        
+        <section class="edu-landing-hero" aria-labelledby="hero-title">
+            <span class="edu-landing-shape is-one" aria-hidden="true"></span>
+            <span class="edu-landing-shape is-two" aria-hidden="true"></span>
+
+            <div class="container-xxl px-3 px-lg-4 position-relative">
+                <div class="row align-items-center g-5">
+                    <div class="col-12 col-lg-6">
+                        <span class="edu-eyebrow mb-3">
+                            <i class="bi bi-stars" aria-hidden="true"></i>
+                            A calmer way to teach online
+                        </span>
+
+                        <h1 class="edu-landing-title fw-bold mb-3" id="hero-title">
+                            Teach and learn,
+                            <span class="text-edu">together</span>.
+                        </h1>
+
+                        <p class="lead text-muted mb-4 edu-measure">
+                            Live video classes, a friendly social feed and simple class management — all in one place. Students follow their teachers and enroll in a class in a single click.
+                        </p>
+
+                        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 mb-3">
+                            <a href="http://localhost/register?role=student" class="btn btn-primary btn-lg">
+                                <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
+                                Register as Student
+                            </a>
+                            <a href="http://localhost/register?role=teacher" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-easel me-1" aria-hidden="true"></i>
+                                Register as Teacher
+                            </a>
+                            <a href="http://localhost/login" class="btn btn-link btn-lg text-decoration-none">
+                                Log in
+                            </a>
+                        </div>
+
+                        <p class="small text-muted mb-0">
+                            <i class="bi bi-check2-circle text-success me-1" aria-hidden="true"></i>
+                            Free to start. No credit card, no download.
+                        </p>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        
+                        <div class="edu-mockup" role="img"
+                             aria-label="Preview of a live class: teacher video, shared notes and participant tiles.">
+                            <div class="edu-mockup-bar" aria-hidden="true">
+                                <span class="edu-mockup-dot"></span>
+                                <span class="edu-mockup-dot"></span>
+                                <span class="edu-mockup-dot"></span>
+                                <span class="ms-auto small text-muted fw-semibold">Algebra basics · Live</span>
+                            </div>
+
+                            <div class="edu-mockup-stage">
+                                <span class="edu-mockup-tile" style="left: 6%; top: 8%; width: 58%; height: 58%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="right: 6%; top: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="right: 6%; bottom: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="left: 6%; bottom: 8%; width: 58%; height: 20%;" aria-hidden="true"></span>
+
+                                <span class="position-absolute top-0 start-0 m-3 badge text-bg-danger">
+                                    <i class="bi bi-broadcast me-1" aria-hidden="true"></i>Live
+                                </span>
+                            </div>
+
+                            <div class="edu-mockup-bar-strip" aria-hidden="true">
+                                <span class="edu-mockup-tool"><i class="bi bi-mic"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-camera-video"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-chat-dots"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-people"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-telephone-x text-danger"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="edu-landing-section" aria-labelledby="steps-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="text-center mb-5">
+                    <span class="edu-eyebrow mb-2">How it works</span>
+                    <h2 class="edu-section-title fw-bold mb-2" id="steps-title">Three steps to your first class</h2>
+                    <p class="text-muted mb-0 mx-auto edu-measure">
+                        Whether you teach or learn, you only need a browser and a few minutes.
+                    </p>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="edu-step-card">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="edu-step-number" aria-hidden="true">1</span>
+                                <h3 class="h6 fw-bold mb-0">Create your account</h3>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Pick Student or Teacher, add your name and you are in. Admins create staff accounts for you.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="edu-step-card">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="edu-step-number" aria-hidden="true">2</span>
+                                <h3 class="h6 fw-bold mb-0">Find or create a class</h3>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Teachers publish a class with a date and time. Students browse by subject and enroll in one click.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="edu-step-card">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="edu-step-number" aria-hidden="true">3</span>
+                                <h3 class="h6 fw-bold mb-0">Meet, chat and keep learning</h3>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Join the live room, then keep the conversation going in the feed with posts, comments and hashtags.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="edu-landing-section pt-0" aria-labelledby="features-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="text-center mb-5">
+                    <span class="edu-eyebrow mb-2">Everything in one place</span>
+                    <h2 class="edu-section-title fw-bold mb-2" id="features-title">Built for real classrooms</h2>
+                    <p class="text-muted mb-0 mx-auto edu-measure">
+                        No plugin maze. Each feature solves one daily teaching moment.
+                    </p>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-lg-6">
+                        <div class="edu-feature-card h-100">
+                            <h3 class="h6 fw-bold mb-2">
+                                <i class="bi bi-easel text-edu me-1" aria-hidden="true"></i>
+                                For teachers
+                            </h3>
+                            <p class="small text-muted mb-0">
+                                Schedule a class, share a private Jitsi room, see who enrolled, and keep the conversation going in the feed.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <div class="edu-feature-card h-100">
+                            <h3 class="h6 fw-bold mb-2">
+                                <i class="bi bi-mortarboard text-edu me-1" aria-hidden="true"></i>
+                                For students
+                            </h3>
+                            <p class="small text-muted mb-0">
+                                Follow teachers, enrol in one click, join live rooms from the browser, and ask questions in posts and comments.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-camera-video"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Live classes</h3>
+                                <p class="small text-muted mb-0">Open a secure video room inside EduConnect and start teaching right away.</p>
+                            </div>
+                        </div>
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-chat-square-text"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Social feed</h3>
+                                <p class="small text-muted mb-0">Short posts, images, likes and comments keep the class community close.</p>
+                            </div>
+                        </div>
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-hash"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Hashtags</h3>
+                                <p class="small text-muted mb-0">Group posts by topic and discover the five busiest tags of the week.</p>
+                            </div>
+                        </div>
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-bell"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Notifications</h3>
+                                <p class="small text-muted mb-0">Followers, likes, comments and starting classes arrive in one calm inbox.</p>
+                            </div>
+                        </div>
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-shield-check"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Safe moderation</h3>
+                                <p class="small text-muted mb-0">Report content, block accounts and keep every learner protected.</p>
+                            </div>
+                        </div>
+                                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="edu-feature-card">
+                                <span class="edu-auth-icon mb-3" aria-hidden="true">
+                                    <i class="bi bi-speedometer2"></i>
+                                </span>
+                                <h3 class="h6 fw-bold">Role dashboards</h3>
+                                <p class="small text-muted mb-0">Students, teachers and admins each see exactly what they need.</p>
+                            </div>
+                        </div>
+                                    </div>
+            </div>
+        </section>
+
+        
+        <section class="edu-landing-section pt-0" aria-labelledby="stats-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="edu-stats-strip">
+                    <h2 class="visually-hidden" id="stats-title">EduConnect at a glance</h2>
+
+                    <div class="row g-4 text-center text-md-start">
+                        <div class="col-6 col-md-3">
+                            <div class="edu-stat-figure">3</div>
+                            <div class="small text-white-50">role-based experiences</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="edu-stat-figure">1</div>
+                            <div class="small text-white-50">click to enroll</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="edu-stat-figure">0</div>
+                            <div class="small text-white-50">apps to install</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="edu-stat-figure">24/7</div>
+                            <div class="small text-white-50">access to your feed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="edu-landing-section pt-0" aria-labelledby="quote-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-8">
+                        <figure class="edu-step-card text-center mb-0">
+                            <span class="edu-empty-illustration mx-auto" aria-hidden="true">
+                                <i class="bi bi-quote"></i>
+                            </span>
+                            <blockquote class="mb-3">
+                                <p class="h5 fw-semibold mb-0" id="quote-title">
+                                    “My students join from their phones, ask questions in the feed and never lose the thread between lessons.”
+                                </p>
+                            </blockquote>
+                            <figcaption class="small text-muted">
+                                A teacher using EduConnect every week
+                            </figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="edu-landing-section pt-0" aria-labelledby="faq-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-8">
+                        <div class="text-center mb-4">
+                            <span class="edu-eyebrow mb-2">Questions</span>
+                            <h2 class="edu-section-title fw-bold mb-0" id="faq-title">Frequently asked</h2>
+                        </div>
+
+                        <div class="accordion edu-faq" id="landingFaq">
+                                                            <div class="accordion-item">
+                                    <h3 class="accordion-header" id="faqHeading0">
+                                        <button class="accordion-button " type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#faqCollapse0"
+                                                aria-expanded="true"
+                                                aria-controls="faqCollapse0">
+                                            Do I need to install anything?
+                                        </button>
+                                    </h3>
+                                    <div id="faqCollapse0"
+                                         class="accordion-collapse collapse show"
+                                         aria-labelledby="faqHeading0" data-bs-parent="#landingFaq">
+                                        <div class="accordion-body small text-muted">No. EduConnect runs in your browser. The video room opens in the same tab and works on phones, tablets and computers.</div>
+                                    </div>
+                                </div>
+                                                            <div class="accordion-item">
+                                    <h3 class="accordion-header" id="faqHeading1">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#faqCollapse1"
+                                                aria-expanded="false"
+                                                aria-controls="faqCollapse1">
+                                            Is it free for students?
+                                        </button>
+                                    </h3>
+                                    <div id="faqCollapse1"
+                                         class="accordion-collapse collapse "
+                                         aria-labelledby="faqHeading1" data-bs-parent="#landingFaq">
+                                        <div class="accordion-body small text-muted">Creating a Student account is free. Your school or teacher decides which classes are published.</div>
+                                    </div>
+                                </div>
+                                                            <div class="accordion-item">
+                                    <h3 class="accordion-header" id="faqHeading2">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#faqCollapse2"
+                                                aria-expanded="false"
+                                                aria-controls="faqCollapse2">
+                                            How do teachers start a class?
+                                        </button>
+                                    </h3>
+                                    <div id="faqCollapse2"
+                                         class="accordion-collapse collapse "
+                                         aria-labelledby="faqHeading2" data-bs-parent="#landingFaq">
+                                        <div class="accordion-body small text-muted">A teacher schedules a class, opens the room when ready and presses “Start class”. Enrolled students then see the Join button.</div>
+                                    </div>
+                                </div>
+                                                            <div class="accordion-item">
+                                    <h3 class="accordion-header" id="faqHeading3">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#faqCollapse3"
+                                                aria-expanded="false"
+                                                aria-controls="faqCollapse3">
+                                            What happens if someone behaves badly?
+                                        </button>
+                                    </h3>
+                                    <div id="faqCollapse3"
+                                         class="accordion-collapse collapse "
+                                         aria-labelledby="faqHeading3" data-bs-parent="#landingFaq">
+                                        <div class="accordion-body small text-muted">Any member can report a post or comment. Admins review reports, hide content and can block the account.</div>
+                                    </div>
+                                </div>
+                                                            <div class="accordion-item">
+                                    <h3 class="accordion-header" id="faqHeading4">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#faqCollapse4"
+                                                aria-expanded="false"
+                                                aria-controls="faqCollapse4">
+                                            Can I use it on a slow connection?
+                                        </button>
+                                    </h3>
+                                    <div id="faqCollapse4"
+                                         class="accordion-collapse collapse "
+                                         aria-labelledby="faqHeading4" data-bs-parent="#landingFaq">
+                                        <div class="accordion-body small text-muted">Yes. Pages are server-rendered, images are lazy-loaded and the video room degrades gracefully with a clear retry message.</div>
+                                    </div>
+                                </div>
+                                                    </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="pb-5" aria-labelledby="cta-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="edu-stats-strip text-center">
+                    <h2 class="h3 fw-bold mb-2" id="cta-title">Ready to start your first class?</h2>
+                    <p class="text-white-50 mb-4 mx-auto edu-measure">
+                        Join as a student to learn, or as a teacher to share what you know.
+                    </p>
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                        <a href="http://localhost/register?role=student" class="btn btn-light btn-lg">
+                            <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
+                            Register as Student
+                        </a>
+                        <a href="http://localhost/register?role=teacher" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-easel me-1" aria-hidden="true"></i>
+                            Register as Teacher
+                        </a>
+                    </div>
+                    <p class="small text-white-50 mt-3 mb-0">
+                        Already have an account?
+                        <a href="http://localhost/login" class="link-light fw-semibold">Log in</a>
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+                    </div>
+                </main>
+
+                <footer class="edu-footer mt-auto">
+                    <div class="container-xxl px-3 px-lg-4">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                            <span>
+                                &copy; 2026 EduConnect
+                            </span>
+                            <span class="d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-mortarboard-fill text-edu" aria-hidden="true"></i>
+                                Learn together, anywhere.
+                            </span>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+
+        
+        
+            </body>
+</html>

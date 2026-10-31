@@ -1,0 +1,2775 @@
+// -----------------------------------------------------------------------------
+// EduConnect stylesheet (Phase 3B premium dashboard design)
+// -----------------------------------------------------------------------------
+// Bootstrap 5 and Bootstrap Icons are pulled straight from node_modules and
+// compiled by Vite (no Tailwind anywhere in this project). The tokens live in
+// _variables.scss and are imported before Bootstrap so the framework itself
+// picks up the brand palette and dark-mode surfaces.
+// -----------------------------------------------------------------------------
+
+@import 'variables';
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+// -----------------------------------------------------------------------------
+// Base
+// -----------------------------------------------------------------------------
+
+:root {
+    --bs-body-bg: var(--edu-page-bg);
+    --bs-body-color: var(--edu-text);
+    --bs-border-color: var(--edu-border);
+    --bs-secondary-color: var(--edu-muted);
+    --bs-link-color-rgb: 79, 70, 229;
+    --bs-link-hover-color-rgb: 55, 48, 163;
+    --bs-focus-ring-color: rgba(79, 70, 229, 0.25);
+}
+
+[data-bs-theme='dark'] {
+    --bs-body-bg: var(--edu-page-bg);
+    --bs-body-color: var(--edu-text);
+    --bs-border-color: var(--edu-border);
+    --bs-secondary-color: var(--edu-muted);
+    --bs-link-color-rgb: 165, 180, 252;
+    --bs-link-hover-color-rgb: 199, 210, 254;
+    --bs-emphasis-color: #f8fafc;
+    --bs-heading-color: #f8fafc;
+    --bs-tertiary-bg: #0f172a;
+    --bs-secondary-bg: #172033;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--edu-page-bg);
+    color: var(--edu-text);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+}
+
+// Bootstrap has no utility for this, but the dashboard flex children need it
+// so long names and titles truncate instead of widening the grid.
+.min-w-0 {
+    min-width: 0;
+}
+
+::selection {
+    background: rgba(79, 70, 229, 0.2);
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+    color: var(--edu-text);
+    letter-spacing: -0.015em;
+}
+
+h1, .h1 { font-size: clamp(1.6rem, 1.25rem + 1.2vw, 2rem); }
+h2, .h2 { font-size: clamp(1.35rem, 1.15rem + 0.7vw, 1.6rem); }
+h3, .h3 { font-size: 1.3rem; }
+h4, .h4 { font-size: 1.15rem; }
+h5, .h5 { font-size: 1rem; }
+h6, .h6 { font-size: 0.9375rem; }
+
+small, .small {
+    font-size: 0.8125rem;
+}
+
+.text-muted {
+    color: var(--edu-muted) !important;
+}
+
+.text-edu {
+    color: var(--edu-primary) !important;
+}
+
+.bg-edu-soft {
+    background: var(--edu-primary-soft) !important;
+}
+
+.edu-num,
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+}
+
+.edu-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--edu-primary);
+}
+
+.edu-muted {
+    color: var(--edu-muted);
+}
+
+hr {
+    border-color: var(--edu-border);
+    opacity: 1;
+}
+
+// Focus rings: visible on every interactive element, never on click-only divs.
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.nav-link:focus-visible,
+.dropdown-item:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--edu-primary);
+    outline-offset: 2px;
+    box-shadow: var(--edu-ring);
+}
+
+// -----------------------------------------------------------------------------
+// Buttons, badges, forms, tables, dropdowns, modals
+// -----------------------------------------------------------------------------
+
+.btn {
+    --bs-btn-font-weight: 600;
+    --bs-btn-padding-x: 0.95rem;
+    --bs-btn-padding-y: 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 0.625rem;
+    transition: transform var(--edu-transition), box-shadow var(--edu-transition),
+        background-color var(--edu-transition), border-color var(--edu-transition),
+        color var(--edu-transition);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--edu-primary);
+    --bs-btn-border-color: var(--edu-primary);
+    --bs-btn-hover-bg: var(--edu-primary-dark);
+    --bs-btn-hover-border-color: var(--edu-primary-dark);
+    --bs-btn-active-bg: var(--edu-primary-dark);
+    --bs-btn-active-border-color: var(--edu-primary-dark);
+    --bs-btn-disabled-bg: #a5b4fc;
+    --bs-btn-disabled-border-color: #a5b4fc;
+    box-shadow: 0 8px 18px -12px rgba(79, 70, 229, 0.8);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 12px 24px -14px rgba(79, 70, 229, 0.85);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--edu-primary);
+    --bs-btn-border-color: rgba(79, 70, 229, 0.35);
+    --bs-btn-hover-bg: var(--edu-primary);
+    --bs-btn-hover-border-color: var(--edu-primary);
+    --bs-btn-active-bg: var(--edu-primary-dark);
+    --bs-btn-active-border-color: var(--edu-primary-dark);
+}
+
+.btn-light {
+    --bs-btn-bg: #ffffff;
+    --bs-btn-border-color: var(--edu-border);
+    --bs-btn-hover-bg: var(--edu-surface-soft);
+    --bs-btn-hover-border-color: var(--edu-border-strong);
+}
+
+[data-bs-theme='dark'] .btn-light {
+    --bs-btn-bg: var(--edu-surface-raised);
+    --bs-btn-border-color: var(--edu-border);
+    --bs-btn-color: var(--edu-text);
+    --bs-btn-hover-bg: var(--edu-surface-muted);
+    --bs-btn-hover-border-color: var(--edu-border-strong);
+    --bs-btn-hover-color: var(--edu-text);
+}
+
+.btn-soft-primary {
+    background: var(--edu-primary-soft);
+    border-color: transparent;
+    color: var(--edu-primary);
+}
+
+.btn-soft-primary:hover {
+    background: rgba(79, 70, 229, 0.18);
+    color: var(--edu-primary-dark);
+}
+
+.edu-icon-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--edu-muted);
+    transition: background-color var(--edu-transition), color var(--edu-transition),
+        border-color var(--edu-transition);
+}
+
+.edu-icon-btn:hover,
+.edu-icon-btn:focus-visible {
+    background: var(--edu-surface-muted);
+    color: var(--edu-text);
+}
+
+.badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 0.38em 0.65em;
+    border-radius: 0.45rem;
+}
+
+.badge.rounded-pill {
+    border-radius: 50rem !important;
+}
+
+.edu-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    background: var(--edu-surface-muted);
+    border: 1px solid var(--edu-border);
+    color: var(--edu-muted-strong);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.form-control,
+.form-select {
+    border-radius: 0.625rem;
+    border-color: var(--edu-border-strong);
+    background-color: var(--edu-surface);
+    color: var(--edu-text);
+    padding-block: 0.55rem;
+}
+
+.form-control::placeholder {
+    color: var(--edu-muted);
+    opacity: 0.85;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--edu-primary);
+    box-shadow: var(--edu-ring);
+    background-color: var(--edu-surface);
+    color: var(--edu-text);
+}
+
+.form-label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--edu-text-soft);
+    margin-bottom: 0.4rem;
+}
+
+.input-group-text {
+    background: var(--edu-surface-soft);
+    border-color: var(--edu-border-strong);
+    color: var(--edu-muted);
+    border-radius: 0.625rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--edu-primary);
+    border-color: var(--edu-primary);
+}
+
+.form-check-input:focus {
+    box-shadow: var(--edu-ring);
+}
+
+// --- Cards -------------------------------------------------------------------
+.card {
+    --bs-card-bg: var(--edu-surface);
+    --bs-card-border-color: var(--edu-border);
+    --bs-card-cap-bg: transparent;
+    --bs-card-border-radius: var(--edu-radius);
+    background-color: var(--edu-surface);
+    color: var(--edu-text);
+    border-radius: var(--edu-radius);
+    border: 1px solid var(--edu-border);
+    box-shadow: var(--edu-shadow-card);
+}
+
+.card-header {
+    border-bottom-color: var(--edu-border);
+    padding: 1rem 1.15rem;
+    background: transparent;
+}
+
+.card-footer {
+    border-top-color: var(--edu-border);
+    background: transparent;
+    padding: 0.9rem 1.15rem;
+}
+
+.card-body {
+    padding: 1.15rem;
+}
+
+// The dashboard uses .edu-card for the hover lift. Keeping it opt-in avoids
+// forms and static panels jumping while somebody is typing in them.
+.edu-card,
+.edu-stat-card,
+.edu-chart-card {
+    transition: transform var(--edu-transition), box-shadow var(--edu-transition),
+        border-color var(--edu-transition);
+}
+
+.edu-card:hover,
+.edu-stat-card:hover,
+.edu-chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--edu-shadow-hover);
+    border-color: var(--edu-border-strong);
+}
+
+// --- Tables ------------------------------------------------------------------
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--edu-text);
+    --bs-table-border-color: var(--edu-border);
+    --bs-table-hover-bg: rgba(79, 70, 229, 0.045);
+    --bs-table-striped-bg: rgba(148, 163, 184, 0.06);
+    margin-bottom: 0;
+}
+
+.table > thead {
+    background: var(--edu-surface-soft);
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.85rem 1rem;
+    border-bottom-color: var(--edu-border);
+    vertical-align: middle;
+}
+
+.table > thead th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--edu-muted);
+    border-bottom: 1px solid var(--edu-border);
+    white-space: nowrap;
+}
+
+.table > tbody tr:last-child > * {
+    border-bottom-width: 0;
+}
+
+.table-hover > tbody > tr:hover > * {
+    --bs-table-bg-state: rgba(79, 70, 229, 0.05);
+}
+
+[data-bs-theme='dark'] .table-hover > tbody > tr:hover > * {
+    --bs-table-bg-state: rgba(129, 140, 248, 0.09);
+}
+
+// --- Dropdowns and modals ----------------------------------------------------
+.dropdown-menu {
+    --bs-dropdown-bg: var(--edu-surface-raised);
+    --bs-dropdown-border-color: var(--edu-border);
+    --bs-dropdown-link-color: var(--edu-text);
+    --bs-dropdown-link-hover-bg: var(--edu-surface-muted);
+    --bs-dropdown-link-active-bg: var(--edu-primary);
+    --bs-dropdown-link-active-color: #ffffff;
+    border-radius: 0.85rem;
+    padding: 0.45rem;
+    box-shadow: var(--edu-shadow-pop);
+}
+
+.dropdown-item {
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.875rem;
+}
+
+.dropdown-divider {
+    border-color: var(--edu-border);
+}
+
+.modal-content {
+    background: var(--edu-surface-raised);
+    color: var(--edu-text);
+    border: 1px solid var(--edu-border);
+    border-radius: 1rem;
+    box-shadow: var(--edu-shadow-pop);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--edu-border);
+}
+
+.list-group {
+    --bs-list-group-bg: transparent;
+    --bs-list-group-color: var(--edu-text);
+    --bs-list-group-border-color: var(--edu-border);
+    --bs-list-group-action-hover-bg: var(--edu-surface-soft);
+    --bs-list-group-action-active-bg: var(--edu-surface-muted);
+}
+
+.alert {
+    border-radius: 0.85rem;
+    border-width: 1px;
+    font-size: 0.875rem;
+}
+
+.progress {
+    background: var(--edu-surface-muted);
+    border-radius: 999px;
+    height: 0.5rem;
+}
+
+.progress-bar {
+    border-radius: 999px;
+}
+
+.edu-progress .progress {
+    min-height: 6px;
+}
+
+// -----------------------------------------------------------------------------
+// Avatars
+// -----------------------------------------------------------------------------
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--edu-surface-muted);
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--edu-surface-muted);
+}
+
+.avatar-lg {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--edu-surface-muted);
+}
+
+.avatar-xl {
+    width: 128px;
+    height: 128px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--edu-surface-muted);
+}
+
+// Initials fallback when a user has not uploaded a photo.
+.edu-avatar-initials {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-size: 0.9em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    user-select: none;
+}
+
+.avatar-sm.edu-avatar-initials {
+    font-size: 0.68rem;
+}
+
+.avatar-lg.edu-avatar-initials {
+    font-size: 1.45rem;
+}
+
+.avatar-xl.edu-avatar-initials {
+    font-size: 1.9rem;
+}
+
+.profile-photo-preview {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid var(--edu-border);
+    background-color: var(--edu-surface-soft);
+}
+
+// -----------------------------------------------------------------------------
+// App shell: sidebar + navbar
+// -----------------------------------------------------------------------------
+
+.edu-body {
+    min-height: 100vh;
+}
+
+.edu-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - var(--edu-navbar-height));
+}
+
+.edu-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.edu-main-inner {
+    flex: 1 1 auto;
+    padding: 0 0 2.5rem;
+}
+
+.edu-page {
+    animation: edu-page-in 320ms var(--edu-ease) both;
+}
+
+@keyframes edu-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.edu-page.is-leaving {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 130ms ease, transform 130ms ease;
+}
+
+// --- Desktop sidebar ---------------------------------------------------------
+.edu-sidebar {
+    --bs-offcanvas-width: 292px;
+    width: var(--edu-sidebar-width);
+    flex: 0 0 auto;
+    color: var(--edu-sidebar-text);
+    background: linear-gradient(160deg, var(--edu-sidebar-from) 0%, var(--edu-sidebar-to) 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    transition: width 180ms var(--edu-ease);
+    z-index: 1030;
+}
+
+// On desktop the offcanvas is static, so it needs its own positioning context
+// for the decorative ::before layer. On phones it is already fixed.
+@media (min-width: 992px) {
+    .edu-sidebar {
+        position: relative;
+    }
+}
+
+.edu-sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(420px 260px at 10% -10%, rgba(124, 58, 237, 0.22), transparent 60%),
+        radial-gradient(360px 240px at 110% 20%, rgba(79, 70, 229, 0.16), transparent 60%);
+}
+
+.edu-sidebar > * {
+    position: relative;
+    z-index: 1;
+}
+
+.edu-sidebar .offcanvas-body {
+    padding: 1rem 0.85rem 1.1rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.edu-sidebar .offcanvas-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.edu-sidebar .offcanvas-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 99px;
+}
+
+.edu-sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.35rem 0.5rem 1rem;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.edu-sidebar-logo:hover {
+    color: #ffffff;
+}
+
+.edu-sidebar-logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 13px;
+    background: linear-gradient(145deg, var(--edu-primary) 0%, var(--edu-secondary) 100%);
+    box-shadow: 0 10px 22px -12px rgba(79, 70, 229, 0.9);
+    color: #ffffff;
+    font-size: 1.15rem;
+}
+
+.edu-sidebar-logo-text {
+    line-height: 1.15;
+}
+
+.edu-sidebar-logo-text strong {
+    display: block;
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.edu-sidebar-logo-text span {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--edu-sidebar-heading);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.edu-sidebar-section {
+    margin: 0.9rem 0.5rem 0.35rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--edu-sidebar-heading);
+}
+
+.edu-sidebar .nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 44px;
+    padding: 0.62rem 0.75rem;
+    margin-bottom: 0.15rem;
+    border-radius: 0.7rem;
+    color: var(--edu-sidebar-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color var(--edu-transition), color var(--edu-transition);
+}
+
+.edu-sidebar .nav-link i {
+    font-size: 1.05rem;
+    width: 1.25rem;
+    text-align: center;
+    flex: 0 0 1.25rem;
+    color: var(--edu-sidebar-heading);
+    transition: color var(--edu-transition);
+}
+
+.edu-sidebar .nav-link:hover,
+.edu-sidebar .nav-link:focus-visible {
+    background: var(--edu-sidebar-hover);
+    color: #ffffff;
+}
+
+.edu-sidebar .nav-link:hover i,
+.edu-sidebar .nav-link:focus-visible i {
+    color: #c7d2fe;
+}
+
+.edu-sidebar .nav-link.active {
+    background: var(--edu-sidebar-active);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.edu-sidebar .nav-link.active i {
+    color: #a5b4fc;
+}
+
+.edu-sidebar .nav-link.active::before {
+    content: '';
+    position: absolute;
+    left: -0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 22px;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, #a5b4fc, #7c3aed);
+    box-shadow: 0 0 16px rgba(165, 180, 252, 0.7);
+}
+
+.edu-sidebar .nav-link .badge {
+    margin-left: auto;
+    font-size: 0.65rem;
+}
+
+.edu-sidebar-divider {
+    border-top: 1px solid var(--edu-sidebar-border);
+    margin: 0.9rem 0.5rem;
+}
+
+.edu-sidebar-user {
+    margin-top: auto;
+    padding: 0.85rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid var(--edu-sidebar-border);
+}
+
+.edu-sidebar-user-name {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.edu-sidebar-user-role {
+    color: var(--edu-sidebar-heading);
+    font-size: 0.72rem;
+    text-transform: capitalize;
+}
+
+.edu-sidebar-user .avatar,
+.edu-sidebar-user .avatar-sm {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+// The offcanvas header on phones must match the dark column.
+.edu-sidebar .offcanvas-header {
+    border-bottom: 1px solid var(--edu-sidebar-border) !important;
+    color: #ffffff;
+}
+
+.edu-sidebar .offcanvas-title {
+    color: #ffffff;
+}
+
+.edu-sidebar .btn-close {
+    filter: invert(1) grayscale(1) brightness(2);
+}
+
+// Collapsed desktop sidebar: icon-only, still readable through tooltips.
+@media (min-width: 992px) {
+    html.edu-sidebar-collapsed .edu-sidebar {
+        width: var(--edu-sidebar-collapsed-width);
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-label,
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-section,
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-logo-text,
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-user-text,
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-user .badge,
+    html.edu-sidebar-collapsed .edu-sidebar .nav-link .badge {
+        display: none !important;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .nav-link {
+        justify-content: center;
+        padding-inline: 0.55rem;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .nav-link i {
+        margin: 0;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .nav-link.active::before {
+        left: -0.55rem;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-logo {
+        justify-content: center;
+        padding-inline: 0;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-user {
+        padding: 0.6rem;
+        text-align: center;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-user .d-flex {
+        justify-content: center;
+    }
+
+    html.edu-sidebar-collapsed .edu-sidebar .edu-sidebar-footer-link {
+        justify-content: center;
+    }
+}
+
+// --- Top navbar --------------------------------------------------------------
+.edu-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1040;
+    min-height: var(--edu-navbar-height);
+    padding: 0.55rem 0;
+    background: color-mix(in srgb, var(--edu-surface) 82%, transparent);
+    border-bottom: 1px solid var(--edu-border);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+    .edu-navbar {
+        background: var(--edu-surface);
+    }
+}
+
+.edu-navbar .navbar-brand {
+    color: var(--edu-text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.edu-navbar-title {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--edu-text);
+    line-height: 1.2;
+    max-width: 22rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.edu-navbar .breadcrumb {
+    --bs-breadcrumb-divider-color: var(--edu-muted);
+    --bs-breadcrumb-item-padding-x: 0.35rem;
+    margin: 0;
+    font-size: 0.72rem;
+}
+
+.edu-navbar .breadcrumb a {
+    color: var(--edu-muted);
+    text-decoration: none;
+}
+
+.edu-navbar .breadcrumb a:hover {
+    color: var(--edu-primary);
+}
+
+.edu-navbar .breadcrumb-item.active {
+    color: var(--edu-muted-strong);
+}
+
+.edu-search {
+    width: 260px;
+}
+
+.edu-search .form-control {
+    background: var(--edu-surface-soft);
+    border-color: transparent;
+    font-size: 0.85rem;
+}
+
+.edu-search .form-control:focus {
+    background: var(--edu-surface);
+    border-color: var(--edu-border-strong);
+}
+
+@media (min-width: 992px) {
+    .edu-search {
+        width: 320px;
+    }
+}
+
+.edu-navbar .nav-link {
+    color: var(--edu-text);
+}
+
+.edu-navbar .dropdown-toggle::after {
+    display: none;
+}
+
+// Bootstrap sets `.navbar-nav .dropdown-menu` to `position: static` outside a
+// `navbar-expand-*` container, so the user/notification menus would expand the
+// bar and push the page down. The top bar is always horizontal here, so keep
+// its menus floating above the content instead.
+.edu-navbar .navbar-nav .dropdown-menu {
+    position: absolute;
+}
+
+.edu-navbar-avatar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.25rem 0.45rem 0.25rem 0.3rem;
+    border-radius: 999px;
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    text-decoration: none;
+    transition: box-shadow var(--edu-transition), border-color var(--edu-transition);
+}
+
+.edu-navbar-avatar:hover {
+    border-color: var(--edu-border-strong);
+    box-shadow: var(--edu-shadow-xs);
+    color: var(--edu-text);
+}
+
+.notification-menu {
+    width: min(380px, 92vw);
+    max-height: 72vh;
+    overflow-y: auto;
+}
+
+.notification-unread {
+    background-color: var(--edu-primary-soft);
+    border-left: 3px solid var(--edu-primary);
+}
+
+.edu-time {
+    font-size: 0.72rem;
+}
+
+// Footer
+.edu-footer {
+    border-top: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    color: var(--edu-muted);
+    padding: 1.1rem 0;
+    font-size: 0.8125rem;
+}
+
+// -----------------------------------------------------------------------------
+// Dashboard shared components
+// -----------------------------------------------------------------------------
+
+.edu-dashboard {
+    padding-bottom: 1rem;
+}
+
+.edu-greeting {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+}
+
+.edu-greeting h1 {
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0.15rem 0 0.2rem;
+}
+
+.edu-greeting p {
+    margin: 0;
+    color: var(--edu-muted);
+    font-size: 0.875rem;
+}
+
+.edu-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+// --- Stat cards --------------------------------------------------------------
+.edu-stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.edu-stat-card .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-height: 142px;
+}
+
+.edu-stat-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.edu-stat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 14px;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.edu-stat-icon.bg-primary {
+    background: rgba(79, 70, 229, 0.12) !important;
+    color: #4f46e5 !important;
+}
+
+.edu-stat-icon.bg-success {
+    background: rgba(16, 185, 129, 0.13) !important;
+    color: #059669 !important;
+}
+
+.edu-stat-icon.bg-info {
+    background: rgba(14, 165, 233, 0.13) !important;
+    color: #0284c7 !important;
+}
+
+.edu-stat-icon.bg-warning {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #b45309 !important;
+}
+
+.edu-stat-icon.bg-danger {
+    background: rgba(239, 68, 68, 0.13) !important;
+    color: #dc2626 !important;
+}
+
+.edu-stat-icon.bg-secondary {
+    background: rgba(124, 58, 237, 0.14) !important;
+    color: #6d28d9 !important;
+}
+
+[data-bs-theme='dark'] .edu-stat-icon.bg-primary { color: #a5b4fc !important; }
+[data-bs-theme='dark'] .edu-stat-icon.bg-success { color: #6ee7b7 !important; }
+[data-bs-theme='dark'] .edu-stat-icon.bg-info { color: #7dd3fc !important; }
+[data-bs-theme='dark'] .edu-stat-icon.bg-warning { color: #fcd34d !important; }
+[data-bs-theme='dark'] .edu-stat-icon.bg-danger { color: #fca5a5 !important; }
+[data-bs-theme='dark'] .edu-stat-icon.bg-secondary { color: #c4b5fd !important; }
+
+.edu-stat-value {
+    font-size: clamp(1.45rem, 1.25rem + 0.6vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--edu-text);
+}
+
+.edu-stat-label {
+    color: var(--edu-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.edu-stat-hint {
+    color: var(--edu-muted);
+    font-size: 0.72rem;
+}
+
+.edu-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.18rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.edu-trend.is-up { color: #059669; }
+.edu-trend.is-down { color: #dc2626; }
+.edu-trend.is-flat { color: var(--edu-muted); }
+
+[data-bs-theme='dark'] .edu-trend.is-up { color: #6ee7b7; }
+[data-bs-theme='dark'] .edu-trend.is-down { color: #fca5a5; }
+
+.edu-sparkline {
+    width: 96px;
+    height: 34px;
+    overflow: visible;
+    opacity: 0.95;
+}
+
+.edu-sparkline polyline {
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.edu-sparkline .sparkline-fill {
+    stroke: none;
+    opacity: 0.16;
+}
+
+// --- Chart cards -------------------------------------------------------------
+.edu-chart-card .card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+
+.edu-chart-card .card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.edu-chart-card .card-subtitle {
+    color: var(--edu-muted);
+    font-size: 0.75rem;
+    margin-top: 0.15rem;
+}
+
+.edu-chart {
+    position: relative;
+    width: 100%;
+}
+
+.edu-chart canvas {
+    max-width: 100%;
+}
+
+.edu-chart-skeleton {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    z-index: 2;
+    background: var(--edu-surface);
+    border-radius: 0.75rem;
+}
+
+.edu-chart-skeleton[hidden] {
+    display: none !important;
+}
+
+.edu-chart-skeleton span {
+    flex: 1 1 0;
+    border-radius: 0.35rem;
+    background: linear-gradient(
+        90deg,
+        var(--edu-surface-muted) 0%,
+        var(--edu-border) 45%,
+        var(--edu-surface-muted) 90%
+    );
+    background-size: 200% 100%;
+    animation: edu-shimmer 1.2s linear infinite;
+}
+
+.edu-chart-skeleton span:nth-child(1) { height: 42%; }
+.edu-chart-skeleton span:nth-child(2) { height: 66%; }
+.edu-chart-skeleton span:nth-child(3) { height: 54%; }
+.edu-chart-skeleton span:nth-child(4) { height: 82%; }
+.edu-chart-skeleton span:nth-child(5) { height: 60%; }
+.edu-chart-skeleton span:nth-child(6) { height: 92%; }
+.edu-chart-skeleton span:nth-child(7) { height: 70%; }
+.edu-chart-skeleton span:nth-child(8) { height: 48%; }
+
+@keyframes edu-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+.edu-chart-range {
+    width: auto;
+    min-width: 118px;
+    font-size: 0.78rem;
+    padding: 0.35rem 1.8rem 0.35rem 0.6rem;
+    border-radius: 0.55rem;
+    background-color: var(--edu-surface-soft);
+    border-color: var(--edu-border);
+}
+
+.edu-chart-total {
+    font-variant-numeric: tabular-nums;
+}
+
+// --- Hero cards --------------------------------------------------------------
+.edu-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--edu-radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+        radial-gradient(900px 360px at 90% -40%, rgba(124, 58, 237, 0.55), transparent 60%),
+        linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4f46e5 100%);
+    color: #ffffff;
+    box-shadow: 0 26px 60px -30px rgba(49, 46, 129, 0.85);
+    padding: clamp(1.25rem, 1rem + 1.2vw, 2rem);
+}
+
+.edu-hero::after {
+    content: '';
+    position: absolute;
+    right: -80px;
+    bottom: -120px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    border: 44px solid rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+}
+
+.edu-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.edu-hero h1,
+.edu-hero h2 {
+    color: #ffffff;
+    letter-spacing: -0.03em;
+}
+
+.edu-hero .edu-hero-meta {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.875rem;
+}
+
+.edu-hero .edu-hero-label {
+    color: #c7d2fe;
+}
+
+.edu-hero .btn-light {
+    --bs-btn-bg: #ffffff;
+    --bs-btn-color: #312e81;
+    --bs-btn-hover-bg: #eef2ff;
+    --bs-btn-hover-color: #1e1b4b;
+    border-color: #ffffff;
+}
+
+.edu-hero .btn-outline-light {
+    --bs-btn-color: #ffffff;
+    --bs-btn-border-color: rgba(255, 255, 255, 0.45);
+    --bs-btn-hover-bg: rgba(255, 255, 255, 0.14);
+    --bs-btn-hover-border-color: #ffffff;
+}
+
+.edu-hero .edu-chip {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #e0e7ff;
+}
+
+.edu-hero-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: #fecaca;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.edu-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25);
+    animation: edu-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes edu-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.82); opacity: 0.65; }
+}
+
+// --- Countdown ---------------------------------------------------------------
+.edu-countdown {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0.45rem;
+}
+
+.edu-countdown-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.edu-countdown-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+}
+
+.edu-countdown-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.66);
+    margin-top: 0.2rem;
+}
+
+.edu-countdown.is-compact .edu-countdown-unit {
+    min-width: 46px;
+    padding: 0.3rem 0.4rem;
+}
+
+.edu-countdown.is-compact .edu-countdown-value {
+    font-size: 1rem;
+}
+
+// --- Avatar stack ------------------------------------------------------------
+.edu-avatar-stack {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 0.35rem;
+}
+
+.edu-avatar-stack .avatar,
+.edu-avatar-stack .avatar-sm {
+    border: 2px solid var(--edu-hero-avatar-border, #312e81);
+    margin-left: -0.45rem;
+    background: var(--edu-surface-muted);
+}
+
+.edu-avatar-stack .edu-avatar-stack-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-left: -0.45rem;
+    background: rgba(255, 255, 255, 0.16);
+    border: 2px solid #312e81;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+// Outside hero cards the stack needs a light border.
+.edu-avatar-stack.on-light .avatar,
+.edu-avatar-stack.on-light .avatar-sm {
+    border-color: var(--edu-surface);
+}
+
+.edu-avatar-stack.on-light .edu-avatar-stack-more {
+    background: var(--edu-surface-muted);
+    border-color: var(--edu-surface);
+    color: var(--edu-muted-strong);
+}
+
+// --- Activity timeline -------------------------------------------------------
+.edu-activity {
+    position: relative;
+    display: flex;
+    gap: 0.85rem;
+    padding: 0.8rem 0;
+}
+
+.edu-activity + .edu-activity {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-activity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 12px;
+    font-size: 1rem;
+}
+
+.edu-activity-icon.bg-primary { background: rgba(79, 70, 229, 0.12); color: #4f46e5; }
+.edu-activity-icon.bg-success { background: rgba(16, 185, 129, 0.13); color: #059669; }
+.edu-activity-icon.bg-info { background: rgba(14, 165, 233, 0.13); color: #0284c7; }
+.edu-activity-icon.bg-warning { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+.edu-activity-icon.bg-danger { background: rgba(239, 68, 68, 0.13); color: #dc2626; }
+
+.edu-activity-text {
+    font-size: 0.85rem;
+    color: var(--edu-text-soft);
+    line-height: 1.4;
+}
+
+.edu-activity-excerpt {
+    color: var(--edu-muted);
+    font-size: 0.78rem;
+    margin-top: 0.15rem;
+}
+
+.edu-activity-time {
+    color: var(--edu-muted);
+    font-size: 0.72rem;
+    margin-top: 0.2rem;
+}
+
+// --- Data table wrapper ------------------------------------------------------
+.edu-data-table .card-header {
+    align-items: center;
+}
+
+.edu-table-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.edu-table-search {
+    position: relative;
+}
+
+.edu-table-search i {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--edu-muted);
+    font-size: 0.8rem;
+    pointer-events: none;
+}
+
+.edu-table-search .form-control {
+    min-width: 190px;
+    padding-left: 2rem;
+    font-size: 0.8rem;
+    background: var(--edu-surface-soft);
+    border-color: transparent;
+}
+
+.edu-table-search .form-control:focus {
+    background: var(--edu-surface);
+    border-color: var(--edu-border-strong);
+}
+
+.edu-sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.edu-sortable:hover {
+    color: var(--edu-text);
+}
+
+.edu-sortable::after {
+    content: '\F282';
+    font-family: 'bootstrap-icons';
+    font-size: 0.62rem;
+    margin-left: 0.3rem;
+    opacity: 0.35;
+}
+
+.edu-sortable[aria-sort='ascending']::after {
+    content: '\F286';
+    opacity: 0.9;
+}
+
+.edu-sortable[aria-sort='descending']::after {
+    content: '\F284';
+    opacity: 0.9;
+}
+
+.edu-table-empty {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--edu-muted);
+    font-size: 0.85rem;
+}
+
+.edu-table-count {
+    color: var(--edu-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+// --- Schedule strip ----------------------------------------------------------
+.edu-schedule {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.edu-schedule-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.6rem 0.25rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface-soft);
+    min-height: 86px;
+    text-align: center;
+}
+
+.edu-schedule-day.is-today {
+    border-color: rgba(79, 70, 229, 0.4);
+    background: var(--edu-primary-soft);
+}
+
+.edu-schedule-weekday {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--edu-muted);
+}
+
+.edu-schedule-date {
+    font-size: 0.95rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--edu-text);
+    line-height: 1.1;
+}
+
+.edu-schedule-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--edu-surface-muted);
+    color: var(--edu-muted-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.edu-schedule-day.has-classes .edu-schedule-count {
+    background: var(--edu-primary);
+    color: #ffffff;
+}
+
+@media (max-width: 575.98px) {
+    .edu-schedule {
+        gap: 0.3rem;
+    }
+
+    .edu-schedule-day {
+        min-height: 76px;
+        padding: 0.45rem 0.15rem;
+    }
+
+    .edu-schedule-date {
+        font-size: 0.85rem;
+    }
+}
+
+// --- Panels / lists ----------------------------------------------------------
+.edu-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.edu-list-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.8rem 0;
+}
+
+.edu-list-row + .edu-list-row {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-list-row:first-child {
+    padding-top: 0.2rem;
+}
+
+.edu-list-row:last-child {
+    padding-bottom: 0.2rem;
+}
+
+.edu-list-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--edu-text);
+    text-decoration: none;
+    display: block;
+}
+
+.edu-list-title:hover {
+    color: var(--edu-primary);
+}
+
+.edu-list-meta {
+    color: var(--edu-muted);
+    font-size: 0.74rem;
+}
+
+.edu-list-excerpt {
+    color: var(--edu-muted-strong);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+}
+
+.edu-report-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.edu-report-actions .btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+}
+
+// --- Feed preview ------------------------------------------------------------
+.edu-feed-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+}
+
+.edu-feed-item + .edu-feed-item {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-feed-body {
+    font-size: 0.82rem;
+    color: var(--edu-text-soft);
+    margin: 0.2rem 0 0.25rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+// --- Feed sidebar widgets ----------------------------------------------------
+.edu-widget-user {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0;
+}
+
+.edu-widget-user + .edu-widget-user {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-widget-user .edu-list-title {
+    font-size: 0.84rem;
+}
+
+.edu-widget-user .btn {
+    white-space: nowrap;
+}
+
+.edu-trending-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+.edu-trending-row + .edu-trending-row {
+    border-top: 1px solid var(--edu-border);
+}
+
+.edu-trending-row:hover .edu-list-title {
+    color: var(--edu-primary);
+}
+
+.edu-trending-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.edu-post-image {
+    width: 100%;
+    max-height: 520px;
+    object-fit: cover;
+    background: var(--edu-surface-muted);
+}
+
+.edu-post-comments .avatar,
+.edu-post-comments .avatar-sm {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+}
+
+// --- Empty states ------------------------------------------------------------
+.edu-empty-illustration {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 24px;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-size: 1.9rem;
+    margin-bottom: 0.9rem;
+    position: relative;
+}
+
+.edu-empty-illustration::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 30px;
+    border: 1px dashed rgba(79, 70, 229, 0.22);
+}
+
+// --- Skeletons ---------------------------------------------------------------
+.edu-skeleton {
+    display: block;
+    border-radius: 0.5rem;
+    background: linear-gradient(
+        90deg,
+        var(--edu-surface-muted) 0%,
+        var(--edu-border) 45%,
+        var(--edu-surface-muted) 90%
+    );
+    background-size: 200% 100%;
+    animation: edu-shimmer 1.2s linear infinite;
+}
+
+// -----------------------------------------------------------------------------
+// Legacy application pages (feed, auth, live room) — kept intentionally
+// -----------------------------------------------------------------------------
+
+.post-body {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.breadcrumb {
+    --bs-breadcrumb-divider-color: var(--edu-muted);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.jitsi-frame {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 340px);
+    min-height: 420px;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background-color: #1c1c1c;
+}
+
+.jitsi-frame iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+}
+
+@media (max-width: 991.98px) {
+    .jitsi-frame {
+        height: calc(100vh - 260px);
+        min-height: 360px;
+        border-radius: 0.5rem;
+    }
+}
+
+.edu-auth-body {
+    background-color: var(--edu-surface);
+    color: var(--edu-text);
+}
+
+.edu-auth-brand {
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    background: linear-gradient(145deg, #312e81 0%, #4338ca 45%, #4f46e5 100%);
+}
+
+.edu-auth-brand::before,
+.edu-auth-brand::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
+.edu-auth-brand::before {
+    width: 420px;
+    height: 420px;
+    top: -160px;
+    right: -140px;
+}
+
+.edu-auth-brand::after {
+    width: 300px;
+    height: 300px;
+    bottom: -120px;
+    left: -100px;
+}
+
+.edu-auth-brand > * {
+    position: relative;
+    z-index: 1;
+}
+
+.edu-auth-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 1.15rem;
+}
+
+.edu-auth-form {
+    max-width: 440px;
+}
+
+.edu-auth-card {
+    border-radius: 1rem;
+}
+
+.password-toggle {
+    min-width: 48px;
+}
+
+@media (max-width: 991.98px) {
+    .edu-auth-body {
+        background-color: var(--edu-page-bg);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Responsive and touch refinements
+// -----------------------------------------------------------------------------
+
+@media (max-width: 991.98px) {
+    .edu-main-inner {
+        padding-top: 1.1rem;
+    }
+
+    .edu-sidebar {
+        --bs-offcanvas-width: min(88vw, 312px);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .btn,
+    .form-control,
+    .form-select,
+    .nav-link,
+    .dropdown-item {
+        min-height: 44px;
+    }
+
+    .btn-sm {
+        min-height: 44px;
+    }
+
+    .edu-icon-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .edu-greeting {
+        align-items: flex-start;
+    }
+
+    .edu-quick-actions {
+        width: 100%;
+    }
+
+    .edu-quick-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .edu-stat-card .card-body {
+        min-height: 128px;
+    }
+
+    .edu-table-search .form-control {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .edu-table-tools {
+        width: 100%;
+    }
+
+    .edu-table-tools .edu-table-search {
+        flex: 1 1 auto;
+    }
+
+    .edu-countdown {
+        gap: 0.3rem;
+    }
+
+    .edu-countdown-unit {
+        min-width: 48px;
+        padding: 0.35rem 0.35rem;
+    }
+
+    .edu-countdown-value {
+        font-size: 1.05rem;
+    }
+}
+
+// Larger screens get a little more breathing room.
+@media (min-width: 1920px) {
+    .edu-main-inner {
+        padding-top: 2rem;
+    }
+
+    .edu-sidebar {
+        --edu-sidebar-width: 284px;
+    }
+
+    .edu-stat-card .card-body {
+        min-height: 152px;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3C — component library additions
+// -----------------------------------------------------------------------------
+// Everything below is built from the tokens in _variables.scss: same spacing
+// steps, same radii, same transitions, same z-index ladder.
+
+// Comfortable reading width for long prose (about 70 characters).
+.edu-measure {
+    max-width: var(--edu-measure);
+}
+
+// --- Button loading state ----------------------------------------------------
+// A form button that is waiting for the server: spinner in place of the label.
+.btn.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+
+    > * {
+        visibility: hidden;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1rem;
+        height: 1rem;
+        margin: -0.5rem 0 0 -0.5rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        color: #fff;
+        animation: edu-spin 0.6s linear infinite;
+    }
+}
+
+.btn-outline-primary.is-loading::after,
+.btn-outline-secondary.is-loading::after,
+.btn-light.is-loading::after {
+    color: var(--edu-primary);
+}
+
+@keyframes edu-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// --- Toasts ------------------------------------------------------------------
+// Rendered by resources/js/toast.js from the data attributes of <x-flash />.
+.edu-toast-stack {
+    position: fixed;
+    right: var(--edu-space-4);
+    bottom: var(--edu-space-4);
+    z-index: var(--edu-z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--edu-space-2);
+    width: min(360px, calc(100vw - 2 * var(--edu-space-4)));
+    pointer-events: none;
+}
+
+.edu-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--edu-space-2);
+    padding: var(--edu-space-3) var(--edu-space-4);
+    border-radius: var(--edu-radius-sm);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    pointer-events: auto;
+    animation: edu-toast-in 200ms var(--edu-ease);
+
+    .btn-close {
+        padding: 0.35rem;
+        margin-left: auto;
+    }
+}
+
+.edu-toast.is-success {
+    border-left: 4px solid var(--edu-success);
+}
+
+.edu-toast.is-error {
+    border-left: 4px solid var(--edu-danger);
+}
+
+.edu-toast.is-info {
+    border-left: 4px solid var(--edu-info);
+}
+
+@keyframes edu-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+// --- Role cards on the register page ----------------------------------------
+.edu-role-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--edu-space-3);
+    padding: var(--edu-space-3) var(--edu-space-4);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface-soft);
+    cursor: pointer;
+    transition: border-color var(--edu-transition), background-color var(--edu-transition),
+        box-shadow var(--edu-transition);
+
+    &:hover {
+        border-color: var(--edu-border-strong);
+    }
+
+    // The radio itself is hidden: the whole card is the hit area (44px+ tall).
+    input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .edu-role-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border-radius: var(--edu-radius-xs);
+        background: var(--edu-primary-soft);
+        color: var(--edu-primary);
+        font-size: 1.15rem;
+    }
+
+    // Selected state, driven by :has() plus a JS class for older browsers.
+    &:has(input:checked),
+    &.is-selected {
+        border-color: var(--edu-primary);
+        background: var(--edu-surface);
+        box-shadow: 0 0 0 1px var(--edu-primary);
+    }
+
+    &:has(input:focus-visible),
+    &.is-selected:focus-within {
+        outline: 2px solid var(--edu-primary);
+        outline-offset: 2px;
+    }
+}
+
+// --- Password strength meter -------------------------------------------------
+.edu-strength {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: var(--edu-space-2);
+}
+
+.edu-strength-track {
+    display: flex;
+    gap: 4px;
+}
+
+.edu-strength-seg {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--edu-surface-muted);
+    transition: background-color var(--edu-transition);
+}
+
+.edu-strength[data-score='1'] .edu-strength-seg:nth-child(-n + 1),
+.edu-strength[data-score='2'] .edu-strength-seg:nth-child(-n + 2) {
+    background: var(--edu-danger);
+}
+
+.edu-strength[data-score='3'] .edu-strength-seg:nth-child(-n + 3) {
+    background: var(--edu-warning);
+}
+
+.edu-strength[data-score='4'] .edu-strength-seg {
+    background: var(--edu-success);
+}
+
+// --- Mobile bottom navigation ------------------------------------------------
+.edu-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--edu-z-mobilenav);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    border-top: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    // Respect the iPhone home indicator area.
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -6px 24px -18px rgba(15, 23, 42, 0.4);
+}
+
+.edu-mobile-nav-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    // 44px minimum touch target.
+    min-width: 56px;
+    min-height: 56px;
+    flex: 1;
+    padding: 0.4rem 0.25rem;
+    font-size: var(--edu-fs-xs);
+    font-weight: 600;
+    color: var(--edu-muted);
+    text-decoration: none;
+
+    i {
+        font-size: 1.25rem;
+    }
+
+    &.active {
+        color: var(--edu-primary);
+    }
+
+    &:hover {
+        color: var(--edu-primary);
+    }
+}
+
+// The badge sits on the icon, not on the label.
+.edu-mobile-nav-badge {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    margin-left: 6px;
+    font-size: 0.625rem;
+    padding: 0.15em 0.4em;
+}
+
+// --- Floating "new post" button ---------------------------------------------
+.edu-fab {
+    position: fixed;
+    right: var(--edu-space-4);
+    bottom: calc(72px + env(safe-area-inset-bottom, 0));
+    z-index: var(--edu-z-fab);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--edu-primary);
+    color: #fff;
+    font-size: 1.4rem;
+    box-shadow: var(--edu-shadow-pop);
+    transition: transform var(--edu-transition), background-color var(--edu-transition);
+
+    &:hover,
+    &:focus-visible {
+        background: var(--edu-primary-dark);
+        color: #fff;
+    }
+
+    &:active {
+        transform: scale(0.94);
+    }
+}
+
+@media (min-width: 992px) {
+    .edu-fab {
+        bottom: var(--edu-space-5);
+        right: var(--edu-space-5);
+    }
+}
+
+// --- Profile cover banner ----------------------------------------------------
+.edu-cover {
+    position: relative;
+    height: 132px;
+    border-radius: var(--edu-radius) var(--edu-radius) 0 0;
+    background: linear-gradient(120deg, #312e81 0%, #4f46e5 55%, #7c3aed 100%);
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        right: -80px;
+        top: -140px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+    }
+}
+
+.edu-cover-avatar {
+    margin-top: -48px;
+}
+
+// --- Highlighted search match ------------------------------------------------
+// The surrounding text keeps its colour; only the matched part is marked, so
+// the highlight never hides information and always has contrast.
+.edu-mark {
+    padding: 0 0.15em;
+    border-radius: var(--edu-radius-xs);
+    background: rgba(245, 158, 11, 0.28);
+    color: inherit;
+    font-weight: 600;
+}
+
+[data-bs-theme='dark'] .edu-mark {
+    background: rgba(245, 158, 11, 0.32);
+}
+
+// --- Filter chips ------------------------------------------------------------
+.edu-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--edu-space-1);
+    padding: 0.35rem 0.75rem;
+    min-height: 36px;
+    border: 1px solid var(--edu-border);
+    border-radius: 999px;
+    background: var(--edu-surface);
+    color: var(--edu-text-soft);
+    font-size: var(--edu-fs-small);
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color var(--edu-transition), background-color var(--edu-transition),
+        color var(--edu-transition);
+
+    &:hover {
+        border-color: var(--edu-primary);
+        color: var(--edu-primary);
+    }
+
+    &.is-active {
+        border-color: var(--edu-primary);
+        background: var(--edu-primary);
+        color: #fff;
+    }
+}
+
+// --- Notification groups (Today / Earlier) -----------------------------------
+.edu-notif-group-label {
+    display: flex;
+    align-items: center;
+    gap: var(--edu-space-2);
+    margin: var(--edu-space-4) 0 var(--edu-space-2);
+    font-size: var(--edu-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--edu-muted);
+
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--edu-border);
+    }
+}
+
+.edu-notif-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--edu-primary);
+    flex-shrink: 0;
+}
+
+// --- Sticky data tables + mobile card view -----------------------------------
+.edu-table-sticky thead th {
+    position: sticky;
+    top: 0;
+    z-index: var(--edu-z-base);
+    background: var(--edu-surface);
+    box-shadow: inset 0 -1px 0 var(--edu-border);
+}
+
+// Below lg each row becomes a card. The label of every cell comes from the
+// data-label attribute, so nothing is lost when the header disappears.
+@media (max-width: 991.98px) {
+    .edu-table-cards {
+        thead {
+            display: none;
+        }
+
+        tbody tr {
+            display: block;
+            border: 1px solid var(--edu-border);
+            border-radius: var(--edu-radius-sm);
+            margin-bottom: var(--edu-space-3);
+            padding: var(--edu-space-2);
+            background: var(--edu-surface);
+        }
+
+        tbody td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--edu-space-3);
+            border: 0;
+            padding: 0.4rem 0.25rem;
+            text-align: right;
+        }
+
+        tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: var(--edu-fs-small);
+            color: var(--edu-muted);
+            text-align: left;
+        }
+    }
+}
+
+// --- Style guide helpers -----------------------------------------------------
+.edu-swatch {
+    height: 56px;
+    border-radius: var(--edu-radius-sm);
+    border: 1px solid var(--edu-border);
+}
+
+.edu-guide-block {
+    padding: var(--edu-space-4);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+}
+
+// --- Landing page (guests) ---------------------------------------------------
+.edu-landing {
+    background: var(--edu-surface);
+}
+
+.edu-landing-hero {
+    position: relative;
+    overflow: hidden;
+    padding: var(--edu-space-8) 0 var(--edu-space-7);
+    background: linear-gradient(180deg, var(--edu-surface-soft) 0%, var(--edu-surface) 100%);
+}
+
+.edu-landing-shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(6px);
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+.edu-landing-shape.is-one {
+    width: 380px;
+    height: 380px;
+    top: -160px;
+    right: -120px;
+    background: radial-gradient(circle at 30% 30%, rgba(79, 70, 229, 0.35), transparent 70%);
+}
+
+.edu-landing-shape.is-two {
+    width: 320px;
+    height: 320px;
+    bottom: -180px;
+    left: -120px;
+    background: radial-gradient(circle at 60% 40%, rgba(124, 58, 237, 0.3), transparent 70%);
+}
+
+.edu-landing-title {
+    font-size: var(--edu-fs-display);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+// Mockup of the live-class screen: pure CSS, no image request.
+.edu-mockup {
+    border-radius: var(--edu-radius);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    box-shadow: var(--edu-shadow-pop);
+    overflow: hidden;
+}
+
+.edu-mockup-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: var(--edu-space-2) var(--edu-space-3);
+    border-bottom: 1px solid var(--edu-border);
+    background: var(--edu-surface-soft);
+}
+
+.edu-mockup-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--edu-border-strong);
+}
+
+.edu-mockup-stage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(140deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
+}
+
+.edu-mockup-tile {
+    position: absolute;
+    border-radius: var(--edu-radius-xs);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.edu-mockup-bar-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--edu-space-3);
+    padding: var(--edu-space-3);
+    background: var(--edu-surface-soft);
+}
+
+.edu-mockup-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--edu-surface);
+    border: 1px solid var(--edu-border);
+    color: var(--edu-text-soft);
+}
+
+.edu-step-card {
+    position: relative;
+    padding: var(--edu-space-5);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius);
+    background: var(--edu-surface);
+    height: 100%;
+}
+
+.edu-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--edu-radius-xs);
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-weight: 700;
+}
+
+.edu-feature-card {
+    padding: var(--edu-space-5);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius);
+    background: var(--edu-surface);
+    height: 100%;
+    transition: transform var(--edu-transition), box-shadow var(--edu-transition),
+        border-color var(--edu-transition);
+
+    &:hover {
+        transform: translateY(-3px);
+        border-color: var(--edu-border-strong);
+        box-shadow: var(--edu-shadow-card);
+    }
+}
+
+.edu-stats-strip {
+    border-radius: var(--edu-radius);
+    background: linear-gradient(120deg, #312e81 0%, #4f46e5 100%);
+    color: #fff;
+    padding: var(--edu-space-6) var(--edu-space-5);
+}
+
+.edu-stat-figure {
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.edu-landing-section {
+    padding: var(--edu-space-7) 0;
+}
+
+.edu-section-title {
+    font-size: var(--edu-fs-h2);
+    letter-spacing: -0.02em;
+}
+
+// A tidy accordion: no double borders, the open item is clearly marked.
+.edu-faq .accordion-item {
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+    margin-bottom: var(--edu-space-2);
+    overflow: hidden;
+}
+
+.edu-faq .accordion-button {
+    font-weight: 600;
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: none;
+
+    &:not(.collapsed) {
+        color: var(--edu-primary);
+        background: var(--edu-surface-soft);
+    }
+}
+
+.edu-landing-footer {
+    padding: var(--edu-space-6) 0 var(--edu-space-5);
+    border-top: 1px solid var(--edu-border);
+    background: var(--edu-surface-soft);
+}
+
+// On phones the bottom navigation and the floating button need room.
+@media (max-width: 991.98px) {
+    .edu-has-mobile-nav {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
+    }
+}
+
+// --- Phase 3C additions ------------------------------------------------------
+
+// Skip link: invisible until it receives keyboard focus, then a normal button.
+.edu-skip-link {
+    position: fixed;
+    top: var(--edu-space-2);
+    left: var(--edu-space-2);
+    z-index: calc(var(--edu-z-fab) + 10);
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:focus {
+        outline: 2px solid var(--edu-primary);
+        outline-offset: 2px;
+    }
+}
+
+// Sidebars that stay in view while the main column scrolls.
+.edu-sticky-aside {
+    position: static;
+}
+
+@media (min-width: 1200px) {
+    .edu-sticky-aside {
+        position: sticky;
+        top: calc(var(--edu-navbar-height) + var(--edu-space-3));
+    }
+}
+
+// Character ring in the feed composer.
+.edu-char-ring {
+    --edu-ring-progress: 0deg;
+    --edu-ring-color: var(--edu-primary);
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--edu-ring-color) var(--edu-ring-progress), var(--edu-border) 0);
+    font-size: var(--edu-fs-xs);
+    font-weight: 700;
+    color: var(--edu-muted);
+    transition: background var(--edu-transition);
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 4px;
+        border-radius: 50%;
+        background: var(--edu-surface);
+    }
+
+    > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    &.is-warning {
+        --edu-ring-color: var(--edu-warning);
+    }
+
+    &.is-full {
+        --edu-ring-color: var(--edu-danger);
+    }
+}
+
+// Heart pop when a post is liked (disabled by prefers-reduced-motion).
+.edu-like-pop {
+    animation: edu-like-pop 220ms ease-out;
+}
+
+@keyframes edu-like-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); }
+    70% { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+
+// Notification row icon.
+.edu-notif-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--edu-primary-soft);
+    color: var(--edu-primary);
+    font-size: 1rem;
+
+    .notification-unread & {
+        background: var(--edu-primary);
+        color: #fff;
+    }
+}
+
+// Hashtag page hero.
+.edu-hashtag-hero {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: var(--edu-radius);
+    background: linear-gradient(135deg, var(--edu-primary) 0%, var(--edu-secondary) 100%);
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+// Admin tables: keep the post preview readable without stretching the table.
+.edu-admin-post-cell {
+    min-width: 16rem;
+    max-width: 30rem;
+
+    @media (max-width: 991.98px) {
+        min-width: 0;
+        max-width: none;
+    }
+}
+
+// Accessibility: honour the operating-system "reduce motion" setting. One
+// single media query for the whole stylesheet (Phase 3C merged the block that
+// used to be duplicated here).
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .edu-feature-card:hover,
+    .edu-card-hover:hover {
+        transform: none;
+    }
+
+    .edu-page,
+    .edu-page.is-leaving {
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    .edu-chart-skeleton span,
+    .edu-skeleton,
+    .edu-live-dot,
+    .edu-toast,
+    .btn.is-loading::after {
+        animation: none !important;
+    }
+}
