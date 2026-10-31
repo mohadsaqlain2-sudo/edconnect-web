@@ -5,9 +5,6 @@ import * as bootstrap from 'bootstrap';
 
 import Alpine from 'alpinejs';
 
-// Chart.js 4 with every controller/scale registered ("/auto").
-import Chart from 'chart.js/auto';
-
 // Layout helpers: remember the desktop sidebar state (FR-31).
 import './layout';
 
@@ -48,6 +45,5 @@ import './classes';
 // Make them available to plain <script> tags inside Blade views.
 window.bootstrap = bootstrap;
 window.Alpine = Alpine;
-window.Chart = Chart;
 
 Alpine.start();
