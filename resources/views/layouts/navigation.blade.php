@@ -14,6 +14,7 @@
 <nav class="navbar edu-navbar sticky-top">
     <div class="container-xxl px-3 px-lg-4 d-flex align-items-center gap-2">
         @auth
+            @unless ($isLandingPage ?? false)
             {{-- Opens the sidebar drawer on phones and tablets only;
                  from lg upwards the sidebar is always visible. --}}
             <button class="btn edu-icon-btn d-lg-none" type="button"
@@ -31,6 +32,7 @@
                     title="{{ __('Toggle the sidebar') }}">
                 <i class="bi bi-layout-sidebar-inset" data-sidebar-toggle-icon aria-hidden="true"></i>
             </button>
+            @endunless
         @endauth
 
         <a class="navbar-brand d-flex align-items-center gap-2 mb-0"

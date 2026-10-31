@@ -75,10 +75,15 @@
         // One unread counter shared by the top bar and the mobile navigation,
         // so both badges always agree and the feed keeps its query budget.
         $layoutUnreadCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+
+        // The public landing page uses this layout too, but a signed-in visitor
+        // should see the marketing site, not the dashboard sidebar, mobile nav
+        // or composer shortcut. Those are dashboard chrome only.
+        $isLandingPage = request()->is('/');
     @endphp
 
     {{-- body carries the notification polling URL for logged in users (FR-24) --}}
-    <body class="edu-body d-flex flex-column min-vh-100 {{ auth()->check() ? 'edu-has-mobile-nav' : '' }}"
+    <body class="edu-body d-flex flex-column min-vh-100 {{ auth()->check() && ! $isLandingPage ? 'edu-has-mobile-nav' : '' }}"
           @auth data-notification-url="{{ route('notifications.poll') }}" @endauth>
         <a class="visually-hidden-focusable edu-skip-link" href="#main-content" style="position:fixed;">
             {{ __('Skip to main content') }}
@@ -88,9 +93,12 @@
         @include('layouts.navigation', ['unreadNotifications' => $layoutUnreadCount])
 
         <div class="edu-shell flex-grow-1" id="appShell">
-            {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones. --}}
+            {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones.
+                 Never on the public landing page. --}}
             @auth
-                @include('layouts.sidebar')
+                @unless ($isLandingPage)
+                    @include('layouts.sidebar')
+                @endunless
             @endauth
 
             <div class="edu-main">
@@ -135,16 +143,18 @@
         @stack('scripts')
 
         @auth
-            {{-- Mobile bottom navigation: five destinations, always one tap away. --}}
-            @include('layouts.mobile-nav', ['unreadCount' => $layoutUnreadCount])
+            @unless ($isLandingPage)
+                {{-- Mobile bottom navigation: five destinations, always one tap away. --}}
+                @include('layouts.mobile-nav', ['unreadCount' => $layoutUnreadCount])
 
-            {{-- Floating composer shortcut, feed only, never over the desktop layout. --}}
-            @if (request()->routeIs('feed.index'))
-                <a class="edu-fab d-lg-none" href="{{ route('posts.create') }}"
-                   aria-label="{{ __('New post') }}" title="{{ __('New post') }}">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                </a>
-            @endif
+                {{-- Floating composer shortcut, feed only, never over the desktop layout. --}}
+                @if (request()->routeIs('feed.index'))
+                    <a class="edu-fab d-lg-none" href="{{ route('posts.create') }}"
+                       aria-label="{{ __('New post') }}" title="{{ __('New post') }}">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    </a>
+                @endif
+            @endunless
         @endauth
     </body>
 </html>
