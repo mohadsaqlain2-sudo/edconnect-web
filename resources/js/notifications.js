@@ -109,11 +109,11 @@ function upgradeReadButtons() {
 
                 const data = await response.json();
 
-                // Drop the unread look and the button itself.
+                // Drop the unread look (dot, "Unread" label) and the button itself.
                 const row = form.closest('.list-group-item');
                 if (row) {
                     row.classList.remove('notification-unread');
-                    row.querySelectorAll('[data-notification-unread-label]')
+                    row.querySelectorAll('[data-notification-unread-label], [data-notification-unread-dot]')
                         .forEach((node) => node.remove());
                 }
 
@@ -122,6 +122,10 @@ function upgradeReadButtons() {
                 if (typeof data.unread_count === 'number') {
                     updateBell({ unread_count: data.unread_count });
                 }
+
+                // The dropdown may still show this entry as unread, so refresh
+                // it in the background too. Failures are already handled above.
+                refreshNotifications();
             } catch (error) {
                 // Something went wrong: let the plain form submit instead.
                 console.error('[EduConnect] marking the notification as read failed', error);

@@ -37,14 +37,14 @@ class ClassRoom extends Model
 
     /**
      * Which status changes a teacher is allowed to make (FR-21).
-     * A class always starts as "scheduled"; from there the teacher can start it
-     * or cancel it, a running class can be ended or pushed back to scheduled,
-     * and a class that was ended by mistake can be reopened.
+     * The only accepted workflow is scheduled -> live -> completed. A class
+     * can never skip a step, jump backwards, or be reopened after it ended:
+     * every button the teacher sees is derived from this map.
      */
     public const TRANSITIONS = [
-        self::STATUS_SCHEDULED => [self::STATUS_LIVE, self::STATUS_COMPLETED],
-        self::STATUS_LIVE => [self::STATUS_COMPLETED, self::STATUS_SCHEDULED],
-        self::STATUS_COMPLETED => [self::STATUS_LIVE],
+        self::STATUS_SCHEDULED => [self::STATUS_LIVE],
+        self::STATUS_LIVE => [self::STATUS_COMPLETED],
+        self::STATUS_COMPLETED => [],
     ];
 
     /**
@@ -237,6 +237,16 @@ class ClassRoom extends Model
 
         // Still scheduled but its slot has already passed.
         return __('Ended');
+    }
+
+    /**
+     * Blade-friendly accessor: {{ $classRoom->timeline_label }}.
+     * Mirrors timelineLabel() so views and tests can use either the method or
+     * the property without duplicating the wording rules (FR-21).
+     */
+    public function getTimelineLabelAttribute(): string
+    {
+        return $this->timelineLabel();
     }
 
     /**

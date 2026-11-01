@@ -38,6 +38,23 @@ class NotificationTest extends TestCase
         $this->assertNull($notification->read_at);
     }
 
+    public function test_a_notification_stores_its_type_message_link_and_actor(): void
+    {
+        $student = User::factory()->student()->create(['name' => 'Actor Alice']);
+        $teacher = User::factory()->teacher()->create();
+
+        $this->actingAs($student)->post(route('follows.store', $teacher));
+
+        $data = $teacher->notifications()->first()->data;
+
+        $this->assertSame('new_follower', $data['type']);
+        $this->assertSame($student->id, $data['actor_id']);
+        $this->assertSame('Actor Alice', $data['actor_name']);
+        $this->assertSame($student->photoUrl(), $data['actor_photo']);
+        $this->assertStringContainsString('Actor Alice', $data['message']);
+        $this->assertSame(route('users.show', $student), $data['url']);
+    }
+
     public function test_following_the_same_teacher_twice_notifies_only_once(): void
     {
         $student = User::factory()->student()->create();
@@ -151,6 +168,36 @@ class NotificationTest extends TestCase
         $this->assertSame('new_class', $follower->notifications()->first()?->data['type']);
     }
 
+    public function test_creating_a_class_does_not_notify_the_teacher_themselves(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+
+        $this->actingAs($teacher)->post(route('classes.store'), [
+            'title' => 'No Self Notification',
+            'date' => now()->addDays(3)->toDateString(),
+            'time' => '12:00',
+            'duration' => 60,
+        ])->assertRedirect();
+
+        $this->assertSame(0, $teacher->notifications()->count());
+    }
+
+    public function test_a_blocked_follower_is_not_notified_of_a_new_class(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $blocked = User::factory()->student()->blocked()->create();
+        $blocked->follow($teacher);
+
+        $this->actingAs($teacher)->post(route('classes.store'), [
+            'title' => 'Blocked Followers Stay Quiet',
+            'date' => now()->addDays(3)->toDateString(),
+            'time' => '12:30',
+            'duration' => 45,
+        ])->assertRedirect();
+
+        $this->assertSame(0, $blocked->notifications()->count());
+    }
+
     public function test_a_class_does_not_notify_people_who_do_not_follow_the_teacher(): void
     {
         $teacher = User::factory()->teacher()->create();
@@ -197,6 +244,22 @@ class NotificationTest extends TestCase
             ->get(route('notifications.index'))
             ->assertOk()
             ->assertSee('started following you');
+    }
+
+    public function test_the_unread_badge_is_hidden_when_there_is_nothing_to_read(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('feed.index'))
+            ->assertOk()
+            // The badge exists for the polling script but starts hidden.
+            ->assertSee('badge rounded-pill text-bg-danger d-none', false);
+    }
+
+    public function test_the_poll_endpoint_requires_a_logged_in_user(): void
+    {
+        $this->getJson(route('notifications.poll'))->assertUnauthorized();
     }
 
     /* ---------------------------------------------------------------
@@ -271,6 +334,20 @@ class NotificationTest extends TestCase
         $unread->assertOk();
         $this->assertSame(1, $unread->viewData('notifications')->total());
         $this->assertSame('Unread Ursula', $unread->viewData('notifications')->first()->data['actor_name']);
+    }
+
+    public function test_marking_all_as_read_only_touches_my_notifications(): void
+    {
+        $mine = User::factory()->create();
+        $other = User::factory()->create();
+
+        $mine->notify(new NewFollower(User::factory()->student()->create()));
+        $other->notify(new NewFollower(User::factory()->student()->create()));
+
+        $this->actingAs($other)->patch(route('notifications.read-all'))->assertRedirect();
+
+        $this->assertSame(0, $other->unreadNotifications()->count());
+        $this->assertSame(1, $mine->unreadNotifications()->count());
     }
 
     public function test_a_user_can_delete_their_own_notification(): void
@@ -361,6 +438,29 @@ class NotificationTest extends TestCase
 
         $this->assertSame(1, $teacher->notifications()->count());
         $this->assertSame(1, $student->notifications()->count());
+    }
+
+    public function test_the_starting_soon_command_skips_students_who_are_not_enrolled(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $enrolled = User::factory()->student()->create();
+        $outsider = User::factory()->student()->create();
+
+        $start = now()->addMinutes(10);
+
+        $classRoom = ClassRoom::factory()->create([
+            'teacher_id' => $teacher->id,
+            'status' => ClassRoom::STATUS_SCHEDULED,
+            'date' => $start->toDateString(),
+            'time' => $start->format('H:i:s'),
+            'duration' => 60,
+        ]);
+        $classRoom->students()->attach($enrolled->id);
+
+        $this->artisan('classes:notify-starting-soon')->assertSuccessful();
+
+        $this->assertSame(1, $enrolled->notifications()->count());
+        $this->assertSame(0, $outsider->notifications()->count());
     }
 
     public function test_the_starting_soon_command_ignores_classes_that_start_later(): void

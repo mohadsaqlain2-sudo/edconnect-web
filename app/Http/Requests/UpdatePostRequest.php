@@ -11,12 +11,24 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdatePostRequest extends FormRequest
 {
     /**
-     * Only the author (or an administrator) may edit the post.
-     * The controller repeats this with $this->authorize('update', $post).
+     * Only the author may edit the post; administrators moderate but do not
+     * rewrite somebody else's words. The controller repeats this with
+     * $this->authorize('update', $post).
      */
     public function authorize(): bool
     {
         return $this->user()?->can('update', $this->route('post')) ?? false;
+    }
+
+    /**
+     * Trim the body before validation, so an edit to only spaces is rejected
+     * instead of blanking out the post.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('body'))) {
+            $this->merge(['body' => trim($this->input('body'))]);
+        }
     }
 
     /**

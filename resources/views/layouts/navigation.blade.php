@@ -101,7 +101,7 @@
                             data-mobile-search-toggle
                             aria-expanded="false" aria-controls="mobileSearchPanel"
                             aria-label="{{ __('Search') }}" title="{{ __('Search') }}">
-                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <i class="bi bi-search" data-mobile-search-icon aria-hidden="true"></i>
                     </button>
                 </li>
 
@@ -204,7 +204,7 @@
                     </div>
 
                     {{-- Suggestions are filled by resources/js/search.js. --}}
-                    <div class="dropdown-menu w-100 mt-1 shadow d-none"
+                    <div class="dropdown-menu show position-absolute top-100 start-0 end-0 shadow d-none"
                          data-search-suggestions role="listbox"
                          aria-label="{{ __('Search suggestions') }}"></div>
                 </form>

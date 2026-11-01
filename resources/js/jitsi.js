@@ -62,15 +62,15 @@ function loadExternalApi(url) {
     });
 }
 
-/** Leave the page and go back to the dashboard (FR-20 edge case). */
-function leaveRoom(dashboardUrl) {
+/** Leave the page and go back to the class detail page (FR-20 edge case). */
+function leaveRoom(leaveUrl) {
     if (leaving) {
         return;
     }
 
     leaving = true;
     window.setTimeout(() => {
-        window.location.href = dashboardUrl;
+        window.location.href = leaveUrl;
     }, LEAVE_DELAY_MS);
 }
 
@@ -122,27 +122,29 @@ async function startRoom(wrapper) {
         userInfo: {
             displayName: wrapper.dataset.displayName,
             email: wrapper.dataset.email,
+            avatarUrl: wrapper.dataset.avatar,
         },
         configOverwrite: {
-            // Low bandwidth friendly: start with the camera off, the mic on.
-            startWithVideoMuted: true,
-            startWithAudioMuted: false,
+            // Teacher-friendly defaults: the moderator starts unmuted with the
+            // camera on. Students start muted so they can look around first.
+            startWithVideoMuted: wrapper.dataset.moderator !== '1',
+            startWithAudioMuted: wrapper.dataset.moderator !== '1',
             // Show the preview screen so a student can check the microphone first.
             prejoinPageEnabled: true,
             // Keeps mobile browsers on the page instead of opening the app.
             disableDeepLinking: true,
-            subject: wrapper.dataset.displayName,
+            // The class title is the meeting subject shown in the room.
+            subject: wrapper.dataset.subject,
+            // Exactly the buttons the brief asks for: microphone, camera,
+            // chat, raise hand, tile view, fullscreen and hang up.
             toolbarButtons: [
                 'microphone',
                 'camera',
-                'desktop',
                 'chat',
                 'raisehand',
                 'tileview',
-                'settings',
-                'hangup',
-                'participants-pane',
                 'fullscreen',
+                'hangup',
             ],
         },
         interfaceConfigOverwrite: {
@@ -165,14 +167,14 @@ async function startRoom(wrapper) {
         status?.classList.add('d-none');
     });
 
-    // The red phone inside Jitsi: back to the dashboard.
+    // The red phone inside Jitsi: back to the class page with a flash message.
     api.addEventListener('hangup', () => {
-        leaveRoom(wrapper.dataset.dashboardUrl);
+        leaveRoom(wrapper.dataset.leaveUrl);
     });
 
     // Fired after the room was closed from the Jitsi side.
     api.addEventListener('readyToClose', () => {
-        leaveRoom(wrapper.dataset.dashboardUrl);
+        leaveRoom(wrapper.dataset.leaveUrl);
     });
 
     // A failed conference (wrong room, server down) must not look like a hang.

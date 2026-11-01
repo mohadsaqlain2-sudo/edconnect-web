@@ -20,6 +20,17 @@ class StoreCommentRequest extends FormRequest
     }
 
     /**
+     * Trim the body before validation, so a whitespace-only comment fails the
+     * "required" rule instead of being stored as invisible content.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('body'))) {
+            $this->merge(['body' => trim($this->input('body'))]);
+        }
+    }
+
+    /**
      * @return array<string, list<string>>
      */
     public function rules(): array

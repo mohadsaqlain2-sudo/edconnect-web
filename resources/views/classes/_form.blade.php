@@ -123,7 +123,7 @@
                     </div>
                 @endunless
 
-                <div class="d-flex flex-column flex-sm-row gap-2 pt-1">
+                <div class="d-flex flex-column flex-sm-row gap-2 pt-1 edu-form-actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check2 me-1" aria-hidden="true"></i>
                         {{ $editing ? __('Save changes') : __('Create class') }}

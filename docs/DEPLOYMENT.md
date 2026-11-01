@@ -438,8 +438,10 @@ Password reset works with either transport:
 - `QUEUE_CONNECTION=database` queues it; the Supervisor worker in step 10 sends
   it. The reset link is identical either way.
 
-If mail silently fails, check `storage/logs/laravel.log` and, for `MAIL_MAILER=log`,
-`storage/logs/laravel.log` again — the log driver writes the whole message there.
+If mail silently fails, check `storage/logs/laravel.log` and the mail provider's
+delivery log. With `MAIL_MAILER=log` the complete message is written to
+`storage/logs/laravel.log`, so you can copy the reset URL out of it to test the
+rest of the flow without a real SMTP server.
 
 ---
 

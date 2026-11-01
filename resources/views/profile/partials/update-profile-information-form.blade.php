@@ -17,6 +17,7 @@
             <img id="photo-preview"
                  src="{{ old('remove_photo') ? asset('images/default-avatar.svg') : $user->photoUrl() }}"
                  alt="{{ $user->name }}"
+                 width="96" height="96"
                  class="profile-photo-preview"
                  data-photo-preview
                  data-default-src="{{ asset('images/default-avatar.svg') }}"
@@ -99,7 +100,7 @@
             <x-input-error class="mt-1" :messages="$errors->get('bio')" />
         </div>
 
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3 edu-form-actions">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 
             @if (session('status') === 'profile-updated')

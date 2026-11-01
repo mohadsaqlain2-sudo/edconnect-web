@@ -1,5 +1,7 @@
 <?php
 
+$jitsiDomain = env('JITSI_DOMAIN', 'meet.jit.si');
+
 return [
 
     /*
@@ -13,6 +15,26 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Jitsi Meet
+    |--------------------------------------------------------------------------
+    |
+    | The domain that hosts the Jitsi Meet installation. The default is the
+    | public server meet.jit.si. Point JITSI_DOMAIN at a self hosted instance
+    | (for example meet.my-school.org) and the whole app follows: the External
+    | API script, the iframe origin and the Content-Security-Policy.
+    |
+    | JITSI_SCRIPT_URL is only needed when a proxy serves external_api.js from
+    | somewhere other than https://{JITSI_DOMAIN}/external_api.js.
+    |
+    */
+
+    'jitsi' => [
+        'domain' => $jitsiDomain,
+        'script_url' => env('JITSI_SCRIPT_URL', 'https://'.$jitsiDomain.'/external_api.js'),
+    ],
 
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),

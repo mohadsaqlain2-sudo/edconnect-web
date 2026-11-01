@@ -7,7 +7,6 @@ use App\Models\Report;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -72,11 +71,8 @@ class AdminPostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        if ($post->image) {
-            Storage::disk('public')->delete($post->image);
-        }
-
-        $post->reports()->delete();
+        // The Post model removes the image and every report about the post or
+        // its comments, so all deletion paths stay consistent.
         $post->delete();
 
         return back()->with('success', __('The post has been deleted.'));

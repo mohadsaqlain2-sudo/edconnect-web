@@ -96,8 +96,9 @@
                         </li>
                     @endcan
 
-                    {{-- Reporting a post that belongs to somebody else (FR-32). --}}
-                    @if (auth()->id() !== $post->user_id)
+                    {{-- Reporting a visible post that belongs to somebody else (FR-32).
+                         Hidden content is not reportable, so no dead action is shown. --}}
+                    @if (! $post->is_hidden && auth()->id() !== $post->user_id)
                         <li>
                             <button type="button" class="dropdown-item" data-bs-toggle="modal"
                                     data-bs-target="#report-post-{{ $post->id }}">
@@ -239,7 +240,7 @@
         :show-trigger="false" />
 @endcan
 
-{{-- Each post owns its report modal (FR-32). --}}
-@if (auth()->id() !== $post->user_id)
+{{-- Each visible post owns its report modal (FR-32). --}}
+@if (! $post->is_hidden && auth()->id() !== $post->user_id)
     @include('reports._modal', ['reportable' => $post])
 @endif

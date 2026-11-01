@@ -26,7 +26,14 @@
     </x-slot>
 
     <div class="container-xxl px-3 px-lg-4">
-        @php($content = $report->reportable)
+        @php
+            $content = $report->reportable;
+            $reportedUser = $report->reported_user;
+            // Blocking is only possible for an active, non-admin account (FR-27).
+            $canBlockReportedUser = $reportedUser !== null
+                && ! $reportedUser->isAdmin()
+                && ! $reportedUser->is_blocked;
+        @endphp
 
         <div class="row g-4">
             <div class="col-12 col-lg-7">
@@ -58,7 +65,12 @@
                             <p class="post-body mb-3 text-break">{{ $content->body }}</p>
 
                             @if ($content instanceof \App\Models\Post && $content->image)
+                                @php($reportedDimensions = $content->imageDimensions())
                                 <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($content->image) }}"
+                                     @if ($reportedDimensions)
+                                         width="{{ $reportedDimensions['width'] }}"
+                                         height="{{ $reportedDimensions['height'] }}"
+                                     @endif
                                      alt="{{ __('Reported image') }}" class="img-fluid rounded mb-3"
                                      loading="lazy" decoding="async">
                             @endif
@@ -157,11 +169,22 @@
                                 </button>
                             @endif
 
-                            @if ($report->reported_user)
+                            @if ($canBlockReportedUser)
                                 <button type="button" class="btn btn-outline-danger w-100"
                                         data-bs-toggle="modal" data-bs-target="#block-report-user-{{ $report->id }}">
                                     <i class="bi bi-person-slash me-1" aria-hidden="true"></i>
-                                    {{ __('Block :name', ['name' => $report->reported_user->name]) }}
+                                    {{ __('Block :name', ['name' => $reportedUser->name]) }}
+                                </button>
+                            @elseif ($reportedUser?->is_blocked)
+                                <button type="button" class="btn btn-outline-secondary w-100" disabled>
+                                    <i class="bi bi-person-check me-1" aria-hidden="true"></i>
+                                    {{ __('This user is already blocked') }}
+                                </button>
+                            @elseif ($reportedUser?->isAdmin())
+                                <button type="button" class="btn btn-outline-secondary w-100" disabled
+                                        title="{{ __('Administrator accounts cannot be blocked.') }}">
+                                    <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+                                    {{ __('Administrator accounts are protected') }}
                                 </button>
                             @endif
 
@@ -196,12 +219,12 @@
                             :show-trigger="false" />
                     @endif
 
-                    @if ($report->reported_user)
+                    @if ($canBlockReportedUser)
                         <x-confirm-delete-modal
                             :id="'block-report-user-'.$report->id"
                             :action="route('admin.reports.block-user', $report)"
                             method="POST"
-                            :title="__('Block :name?', ['name' => $report->reported_user->name])"
+                            :title="__('Block :name?', ['name' => $reportedUser->name])"
                             :message="__('They will be logged out immediately and cannot sign in until an administrator unblocks them.')"
                             :confirm-label="__('Block account')"
                             confirm-class="btn btn-warning"

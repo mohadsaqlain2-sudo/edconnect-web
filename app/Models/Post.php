@@ -36,6 +36,40 @@ class Post extends Model
         ];
     }
 
+    /**
+     * Clean up the rows and files that the database cascade cannot reach.
+     *
+     * A post can be deleted from three places (the author, the admin post
+     * table and the moderation queue). Doing the cleanup here means all three
+     * paths behave the same, including any future deletion path.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Post $post): void {
+            // "reports" is polymorphic, so there is no foreign key to cascade.
+            Report::query()
+                ->where('reportable_type', self::class)
+                ->where('reportable_id', $post->id)
+                ->delete();
+
+            // The post's comments disappear through the FK cascade, but
+            // reports about those comments would be left behind.
+            $commentIds = $post->comments()->pluck('comments.id');
+
+            if ($commentIds->isNotEmpty()) {
+                Report::query()
+                    ->where('reportable_type', Comment::class)
+                    ->whereIn('reportable_id', $commentIds)
+                    ->delete();
+            }
+
+            // The uploaded image is a file, not a row (FR-8, FR-28).
+            if ($post->image) {
+                Storage::disk('public')->delete($post->image);
+            }
+        });
+    }
+
     /* ---------------------------------------------------------------
      | Relationships
      * --------------------------------------------------------------- */

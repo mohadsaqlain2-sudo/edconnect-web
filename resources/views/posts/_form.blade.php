@@ -90,7 +90,7 @@
         @endif
     </div>
 
-    <div class="d-flex flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2 edu-form-actions">
         <button type="submit" class="btn btn-primary">
             <i class="bi bi-send me-1" aria-hidden="true"></i>
             {{ $editing ? __('Save changes') : __('Publish') }}

@@ -166,7 +166,19 @@ function setFollowState(form, button, following) {
 function updateFollowCounts(data) {
     if (data.user_id !== undefined) {
         document.querySelectorAll(`[data-followers-count][data-user-id="${data.user_id}"]`).forEach((element) => {
-            element.textContent = data.followers;
+            const count = Number(data.followers);
+
+            element.textContent = count;
+
+            // The word after the number has to follow the plural rules too
+            // (0 followers, 1 follower, 2 followers).
+            const label = element.parentElement?.querySelector('[data-follower-label]');
+
+            if (label) {
+                label.textContent = count === 1
+                    ? element.dataset.labelSingular
+                    : element.dataset.labelPlural;
+            }
         });
     }
 

@@ -2,15 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Comment;
-use App\Models\Post;
-use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -92,32 +88,16 @@ class AdminUserController extends Controller
     {
         $this->authorize('delete', $user);
 
-        // Reports about the content this user wrote lose their subject.
-        $postIds = $user->posts()->pluck('posts.id');
-        $commentIds = $user->comments()->pluck('comments.id');
-
-        Report::query()
-            ->where('reportable_type', Post::class)
-            ->whereIn('reportable_id', $postIds)
-            ->delete();
-
-        Report::query()
-            ->where('reportable_type', Comment::class)
-            ->whereIn('reportable_id', $commentIds)
-            ->delete();
-
-        if ($user->photo) {
-            Storage::disk('public')->delete($user->photo);
-        }
-
         if (config('session.driver') === 'database') {
             DB::table('sessions')->where('user_id', $user->id)->delete();
         }
 
         $name = $user->name;
 
-        // Posts, comments, likes, follows and enrollments go with the account
-        // through the cascade rules on the foreign keys.
+        // The User model removes the profile photo, the post images and every
+        // report about this user's content in its deleting hook. Posts,
+        // comments, likes, follows and enrollments go with the account through
+        // the cascade rules on the foreign keys.
         $user->delete();
 
         return redirect()

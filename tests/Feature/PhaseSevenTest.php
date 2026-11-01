@@ -359,4 +359,380 @@ class PhaseSevenTest extends TestCase
             ->assertSee('A post with reports on the admin list.')
             ->assertSee('text-bg-warning">2', false);
     }
+
+    /* -----------------------------------------------------------------
+     | Admin-only mutations (FR-27, FR-28, FR-33)
+     * ----------------------------------------------------------------- */
+
+    public function test_every_admin_mutation_route_rejects_teachers_and_students(): void
+    {
+        $target = User::factory()->student()->create();
+        $post = Post::factory()->create();
+        $classRoom = ClassRoom::factory()->create();
+        $report = Report::factory()->forPost()->create();
+
+        $actions = [
+            ['patch', 'admin.users.block', $target],
+            ['patch', 'admin.users.unblock', $target],
+            ['delete', 'admin.users.destroy', $target],
+            ['patch', 'admin.posts.hide', $post],
+            ['delete', 'admin.posts.destroy', $post],
+            ['patch', 'admin.classes.hide', $classRoom],
+            ['delete', 'admin.classes.destroy', $classRoom],
+        ];
+
+        foreach ([User::factory()->teacher()->create(), User::factory()->student()->create()] as $user) {
+            foreach ($actions as [$method, $name, $parameter]) {
+                $this->actingAs($user)
+                    ->{$method}(route($name, $parameter))
+                    ->assertForbidden();
+            }
+        }
+
+        // Nothing was changed by any of the refused requests.
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'is_blocked' => false]);
+        $this->assertDatabaseHas('posts', ['id' => $post->id, 'is_hidden' => false]);
+        $this->assertDatabaseHas('classes', ['id' => $classRoom->id, 'is_hidden' => false]);
+        $this->assertSame(Report::STATUS_PENDING, $report->fresh()->status);
+    }
+
+    /* -----------------------------------------------------------------
+     | Report detail page (FR-33, FR-34)
+     * ----------------------------------------------------------------- */
+
+    public function test_the_report_detail_page_offers_every_moderation_action(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $offender = User::factory()->teacher()->create(['name' => 'Offender Olga']);
+        $post = Post::factory()->create(['user_id' => $offender->id]);
+
+        $report = Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+            'details' => 'The details the moderator has to read.',
+        ]);
+
+        Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reports.show', $report))
+            ->assertOk()
+            ->assertSee('The details the moderator has to read.')
+            ->assertSee('Other reports on this content')
+            ->assertSee('Hide the content')
+            ->assertSee('Unhide the content')
+            ->assertSee('Delete the content')
+            ->assertSee('Block '.$offender->name)
+            ->assertSee('Mark as reviewed')
+            ->assertSee('Dismiss the report')
+            ->assertSee(route('admin.reports.hide', $report), false)
+            ->assertSee(route('admin.reports.content.destroy', $report), false)
+            ->assertSee(route('admin.reports.block-user', $report), false);
+    }
+
+    public function test_the_queue_does_not_offer_to_block_an_administrator(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $otherAdmin = User::factory()->admin()->create(['name' => 'Protected Paula']);
+        $post = Post::factory()->create(['user_id' => $otherAdmin->id]);
+
+        $report = Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reports.show', $report))
+            ->assertOk()
+            ->assertDontSee('Block Protected Paula')
+            ->assertSee('Administrator accounts are protected');
+    }
+
+    public function test_unhiding_restores_the_content_and_marks_the_report_reviewed(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $author = User::factory()->teacher()->create();
+        $viewer = User::factory()->student()->create();
+        $viewer->follow($author);
+
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'body' => 'This post comes back after unhide.',
+        ]);
+        $report = Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+
+        $this->actingAs($admin)->patch(route('admin.reports.hide', $report))->assertSessionHas('success');
+        $this->assertTrue($post->fresh()->is_hidden);
+
+        $this->actingAs($admin)->patch(route('admin.reports.unhide', $report))->assertSessionHas('success');
+
+        $this->assertFalse($post->fresh()->is_hidden);
+        $this->assertSame(Report::STATUS_REVIEWED, $report->fresh()->status);
+
+        $this->actingAs($viewer)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertSee('This post comes back after unhide.');
+    }
+
+    /* -----------------------------------------------------------------
+     | Hidden comments on the feed (FR-28)
+     * ----------------------------------------------------------------- */
+
+    public function test_a_hidden_post_offers_no_report_action_to_its_viewers(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $post = Post::factory()->hidden()->create();
+
+        $this->actingAs($admin)
+            ->get(route('posts.show', $post))
+            ->assertOk()
+            ->assertDontSee('report-post-'.$post->id, false)
+            ->assertDontSee('Report post');
+    }
+
+    public function test_a_comment_under_a_hidden_post_cannot_be_reported(): void
+    {
+        $reporter = User::factory()->student()->create();
+        $post = Post::factory()->hidden()->create();
+        $comment = Comment::factory()->create(['post_id' => $post->id]);
+
+        $this->actingAs($reporter)
+            ->post(route('reports.comments.store', $comment), ['reason' => 'spam'])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('reports', 0);
+    }
+
+    public function test_hiding_content_resolves_every_pending_report_about_it(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $post = Post::factory()->create();
+
+        $first = Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+        $second = Report::factory()->create([
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.reports.hide', $first))
+            ->assertSessionHas('success');
+
+        $this->assertSame(Report::STATUS_REVIEWED, $first->fresh()->status);
+        $this->assertSame(Report::STATUS_REVIEWED, $second->fresh()->status);
+    }
+
+    public function test_a_hidden_comment_disappears_from_the_feed_preview_and_counter(): void
+    {
+        $author = User::factory()->teacher()->create();
+        $viewer = User::factory()->student()->create();
+        $viewer->follow($author);
+
+        $post = Post::factory()->create(['user_id' => $author->id]);
+
+        Comment::factory()->create([
+            'post_id' => $post->id,
+            'body' => 'This visible comment stays on the feed.',
+        ]);
+        Comment::factory()->hidden()->create([
+            'post_id' => $post->id,
+            'body' => 'This hidden comment must never appear.',
+        ]);
+
+        $response = $this->actingAs($viewer)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertSee('This visible comment stays on the feed.')
+            ->assertDontSee('This hidden comment must never appear.');
+
+        $feedPost = $response->viewData('posts')->firstWhere('id', $post->id);
+
+        $this->assertNotNull($feedPost);
+        $this->assertSame(1, $feedPost->comments_count);
+    }
+
+    /* -----------------------------------------------------------------
+     | Blocked accounts cannot interact (FR-6, section 5.6)
+     * ----------------------------------------------------------------- */
+
+    public function test_a_blocked_user_cannot_report_like_or_follow(): void
+    {
+        $blocked = User::factory()->student()->blocked()->create();
+        $teacher = User::factory()->teacher()->create();
+        $post = Post::factory()->create(['user_id' => $teacher->id]);
+
+        $this->actingAs($blocked)
+            ->post(route('reports.posts.store', $post), ['reason' => 'spam'])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('error');
+        $this->assertGuest();
+
+        $this->actingAs($blocked)
+            ->post(route('posts.like', $post))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
+
+        $this->actingAs($blocked)
+            ->post(route('follows.store', $teacher))
+            ->assertRedirect(route('login'));
+        $this->assertGuest();
+
+        $this->assertDatabaseCount('reports', 0);
+        $this->assertDatabaseCount('likes', 0);
+        $this->assertDatabaseCount('follows', 0);
+    }
+
+    /* -----------------------------------------------------------------
+     | Admin list search, pagination and confirmations (FR-27, FR-28)
+     * ----------------------------------------------------------------- */
+
+    public function test_admin_post_and_class_lists_can_be_searched(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $author = User::factory()->teacher()->create(['name' => 'Searchable Author']);
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'body' => 'A body with a needle marker.',
+        ]);
+        Post::factory()->create(['body' => 'An unrelated body.']);
+
+        $classTeacher = User::factory()->teacher()->create(['name' => 'Class Teacher X']);
+        $classRoom = ClassRoom::factory()->create([
+            'teacher_id' => $classTeacher->id,
+            'title' => 'Algebra Special',
+        ]);
+        ClassRoom::factory()->create(['title' => 'Unrelated Class']);
+
+        $byBody = $this->actingAs($admin)
+            ->get(route('admin.posts.index', ['q' => 'needle']))
+            ->assertOk();
+        $this->assertSame([$post->id], $byBody->viewData('posts')->pluck('id')->all());
+
+        $byAuthor = $this->actingAs($admin)
+            ->get(route('admin.posts.index', ['q' => 'Searchable Author']))
+            ->assertOk();
+        $this->assertContains($post->id, $byAuthor->viewData('posts')->pluck('id')->all());
+
+        $byTitle = $this->actingAs($admin)
+            ->get(route('admin.classes.index', ['q' => 'Algebra']))
+            ->assertOk();
+        $this->assertSame([$classRoom->id], $byTitle->viewData('classes')->pluck('id')->all());
+
+        $byTeacher = $this->actingAs($admin)
+            ->get(route('admin.classes.index', ['q' => 'Class Teacher X']))
+            ->assertOk();
+        $this->assertContains($classRoom->id, $byTeacher->viewData('classes')->pluck('id')->all());
+    }
+
+    public function test_the_report_queue_searches_details_reason_and_reporter(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $reporter = User::factory()->student()->create(['name' => 'Reporter Quinn']);
+        $post = Post::factory()->create();
+
+        Report::factory()->create([
+            'reporter_id' => $reporter->id,
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+            'reason' => 'hate_speech',
+            'details' => 'A unique details marker.',
+        ]);
+
+        foreach (['unique details marker', 'hate_speech', 'Quinn'] as $term) {
+            $response = $this->actingAs($admin)
+                ->get(route('admin.reports.index', ['q' => $term]))
+                ->assertOk();
+
+            $this->assertSame(1, $response->viewData('reports')->total(), $term);
+        }
+    }
+
+    public function test_the_user_list_offers_block_and_delete_confirmation_modals(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $student = User::factory()->student()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSee('block-user-'.$student->id, false)
+            ->assertSee('delete-user-'.$student->id, false)
+            ->assertSee('Block account')
+            ->assertSee('Delete account');
+    }
+
+    public function test_admin_lists_paginate_at_twenty_rows(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $author = User::factory()->teacher()->create();
+
+        User::factory()->count(21)->create();
+        Post::factory()->count(21)->create(['user_id' => $author->id]);
+        ClassRoom::factory()->count(21)->create(['teacher_id' => $author->id]);
+        Report::factory()->count(21)->create();
+
+        $lists = [
+            ['admin.users.index', 'users'],
+            ['admin.posts.index', 'posts'],
+            ['admin.classes.index', 'classes'],
+            ['admin.reports.index', 'reports'],
+        ];
+
+        foreach ($lists as [$routeName, $key]) {
+            $paginator = $this->actingAs($admin)
+                ->get(route($routeName))
+                ->assertOk()
+                ->viewData($key);
+
+            $this->assertSame(20, $paginator->perPage(), $key);
+            $this->assertCount(20, $paginator->items(), $key);
+            $this->assertTrue($paginator->hasMorePages(), $key);
+        }
+    }
+
+    public function test_deleting_a_user_removes_the_reports_they_filed(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $reporter = User::factory()->student()->create();
+        $post = Post::factory()->create();
+
+        Report::factory()->create([
+            'reporter_id' => $reporter->id,
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.users.destroy', $reporter))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('users', ['id' => $reporter->id]);
+        $this->assertDatabaseCount('reports', 0);
+        $this->assertDatabaseHas('posts', ['id' => $post->id]);
+    }
+
+    public function test_the_admin_dashboard_links_to_the_pending_reports(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $report = Report::factory()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Pending reports')
+            ->assertSee(route('admin.reports.index', ['status' => 'pending']), false)
+            ->assertSee(route('admin.reports.show', $report), false)
+            ->assertSee(route('admin.reports.hide', $report), false)
+            ->assertSee(route('admin.reports.dismiss', $report), false);
+    }
 }

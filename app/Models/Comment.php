@@ -31,6 +31,23 @@ class Comment extends Model
         ];
     }
 
+    /**
+     * Delete the reports that point at this comment.
+     *
+     * "reports" is polymorphic (no foreign key), so the database cascade never
+     * removes these rows. Comments are deleted by their author, by an admin
+     * and through the post cascade, so the cleanup lives on the model.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (Comment $comment): void {
+            Report::query()
+                ->where('reportable_type', self::class)
+                ->where('reportable_id', $comment->id)
+                ->delete();
+        });
+    }
+
     /* ---------------------------------------------------------------
      | Relationships
      * --------------------------------------------------------------- */

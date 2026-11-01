@@ -20,6 +20,9 @@ class LikeController extends Controller
      */
     public function store(Request $request, Post $post): JsonResponse|RedirectResponse
     {
+        // A hidden post cannot be liked by people who are not allowed to see it.
+        $this->authorize('view', $post);
+
         // firstOrCreate + the unique index on (post_id, user_id) make a
         // duplicate like impossible, even on a double click.
         $like = $post->likes()->firstOrCreate(['user_id' => $request->user()->id]);
@@ -38,6 +41,10 @@ class LikeController extends Controller
      */
     public function destroy(Request $request, Post $post): JsonResponse|RedirectResponse
     {
+        // Keep the same visibility rule as store(), so a hidden post cannot be
+        // probed through the unlike endpoint either.
+        $this->authorize('view', $post);
+
         $post->likes()->where('user_id', $request->user()->id)->delete();
 
         return $this->payload($request, $post);

@@ -62,7 +62,7 @@ class AdminClassController extends Controller
         $classRoom->update(['is_hidden' => ! $classRoom->is_hidden]);
 
         return back()->with('success', $classRoom->is_hidden
-            ? __('The class has been hidden.')
+            ? __('The class has been hidden (cancelled).')
             : __('The class is visible again.'));
     }
 

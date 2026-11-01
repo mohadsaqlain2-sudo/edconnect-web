@@ -25,19 +25,29 @@ class ClassController extends Controller
 
     /**
      * "My classes": everything this teacher created, newest first.
+     * A teacher can narrow the list to one status (FR-15).
      */
     public function index(Request $request): View
     {
+        $status = $request->query('status');
+        $status = is_string($status) && in_array($status, ClassRoom::STATUSES, true)
+            ? $status
+            : '';
+
         $classes = $request->user()->classes()
             // withCount keeps the card free of one query per class (no N+1).
             ->withCount('students')
+            ->when($status !== '', fn ($query) => $query->byStatus($status))
             ->orderByRaw("CASE status WHEN 'live' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END")
             ->orderBy('date')
             ->orderBy('time')
             ->paginate(self::PER_PAGE)
             ->withQueryString();
 
-        return view('classes.index', ['classes' => $classes]);
+        return view('classes.index', [
+            'classes' => $classes,
+            'status' => $status,
+        ]);
     }
 
     /**

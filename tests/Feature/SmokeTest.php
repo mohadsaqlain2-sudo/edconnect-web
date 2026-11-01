@@ -145,7 +145,14 @@ class SmokeTest extends TestCase
 
     public function test_the_report_to_moderation_flow_works_end_to_end(): void
     {
-        $post = Post::query()->visible()->where('user_id', '!=', $this->student->id)->firstOrFail();
+        // The demo seeder files random reports, one of them by the first
+        // student. Pick a visible post this student has not reported yet, so
+        // the test does not depend on the seed's random choice.
+        $post = Post::query()
+            ->visible()
+            ->where('user_id', '!=', $this->student->id)
+            ->whereDoesntHave('reports', fn ($query) => $query->where('reporter_id', $this->student->id))
+            ->firstOrFail();
 
         // 1. Student reports a post.
         $this->actingAs($this->student)

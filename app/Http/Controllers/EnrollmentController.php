@@ -18,6 +18,10 @@ class EnrollmentController extends Controller
      */
     public function store(Request $request, ClassRoom $classRoom): RedirectResponse
     {
+        // The route middleware already limits this to students; repeat the rule
+        // here so a controller call can never enroll a teacher (FR-17).
+        abort_unless($request->user()->isStudent(), 403);
+
         // Also blocks hidden classes (FR-28).
         $this->authorize('view', $classRoom);
 
@@ -36,6 +40,8 @@ class EnrollmentController extends Controller
      */
     public function destroy(Request $request, ClassRoom $classRoom): RedirectResponse
     {
+        abort_unless($request->user()->isStudent(), 403);
+
         $classRoom->students()->detach($request->user()->id);
 
         return back()->with('success', __('You have left this class.'));

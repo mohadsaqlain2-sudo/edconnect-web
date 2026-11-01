@@ -22,7 +22,7 @@ class SecurityHeaders
         $response->headers->remove('X-Powered-By');
 
         $isJitsiRoom = $request->routeIs('classes.room');
-        $jitsiDomain = config('jitsi.domain', 'meet.jit.si');
+        $jitsiDomain = config('services.jitsi.domain', 'meet.jit.si');
 
         if ($isJitsiRoom) {
             // The video room is embedded from another origin, so the page must

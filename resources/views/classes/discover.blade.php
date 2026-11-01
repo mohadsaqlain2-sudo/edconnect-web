@@ -29,23 +29,24 @@
     </x-slot>
 
     <div class="container-xxl px-3 px-lg-4">
-        {{-- Search by title or teacher + subject + date (FR-19). A plain GET
-             form, so the filters work without JavaScript and can be shared. --}}
+        {{-- Search by title, subject or teacher + subject + teacher + date (FR-17).
+             A plain GET form, so the filters work without JavaScript and can be
+             shared. --}}
         <section class="card edu-card mb-3" aria-labelledby="filters-title">
             <div class="card-body">
                 <h2 class="visually-hidden" id="filters-title">{{ __('Filter classes') }}</h2>
 
                 <form method="GET" action="{{ route('classes.discover') }}" class="row g-2 align-items-end">
-                    <div class="col-12 col-lg-5">
+                    <div class="col-12 col-lg-4">
                         <label for="q" class="form-label small">{{ __('Search') }}</label>
                         <div class="input-group">
                             <span class="input-group-text bg-body" aria-hidden="true"><i class="bi bi-search"></i></span>
                             <input type="search" name="q" id="q" value="{{ $search }}" maxlength="150"
-                                   class="form-control" placeholder="{{ __('Class title or teacher name') }}">
+                                   class="form-control" placeholder="{{ __('Class title, subject or teacher') }}">
                         </div>
                     </div>
 
-                    <div class="col-6 col-lg-3">
+                    <div class="col-6 col-lg-2">
                         <label for="subject" class="form-label small">{{ __('Subject') }}</label>
                         <select name="subject" id="subject" class="form-select">
                             <option value="">{{ __('All subjects') }}</option>
@@ -56,15 +57,25 @@
                     </div>
 
                     <div class="col-6 col-lg-2">
+                        <label for="teacher" class="form-label small">{{ __('Teacher') }}</label>
+                        <select name="teacher" id="teacher" class="form-select">
+                            <option value="">{{ __('All teachers') }}</option>
+                            @foreach ($teachers as $option)
+                                <option value="{{ $option->id }}" @selected($teacher === $option->id)>{{ $option->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-lg-2">
                         <label for="date" class="form-label small">{{ __('Date') }}</label>
                         <input type="date" name="date" id="date" value="{{ $date }}" class="form-control">
                     </div>
 
-                    <div class="col-12 col-lg-2 d-flex gap-2">
+                    <div class="col-6 col-lg-2 d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-grow-1">
                             <i class="bi bi-funnel me-1" aria-hidden="true"></i> {{ __('Filter') }}
                         </button>
-                        @if ($search !== '' || $subject !== '' || $date !== '')
+                        @if ($search !== '' || $subject !== '' || $teacher > 0 || $date !== '')
                             <a href="{{ route('classes.discover') }}" class="btn btn-outline-secondary"
                                title="{{ __('Clear the filters') }}" aria-label="{{ __('Clear the filters') }}">
                                 <i class="bi bi-x-lg" aria-hidden="true"></i>
@@ -77,13 +88,13 @@
                 @if ($subjects->isNotEmpty())
                     <div class="d-flex flex-wrap gap-2 mt-3" aria-label="{{ __('Filter by subject') }}">
                         <a class="edu-filter-chip {{ $subject === '' ? 'is-active' : '' }}"
-                           href="{{ route('classes.discover', array_filter(['q' => $search, 'date' => $date])) }}">
+                           href="{{ route('classes.discover', array_filter(['q' => $search, 'teacher' => $teacher ?: null, 'date' => $date])) }}">
                             {{ __('All') }}
                         </a>
 
                         @foreach ($subjects as $option)
                             <a class="edu-filter-chip {{ $subject === $option ? 'is-active' : '' }}"
-                               href="{{ route('classes.discover', array_filter(['q' => $search, 'subject' => $option, 'date' => $date])) }}">
+                               href="{{ route('classes.discover', array_filter(['q' => $search, 'subject' => $option, 'teacher' => $teacher ?: null, 'date' => $date])) }}">
                                 {{ $option }}
                             </a>
                         @endforeach

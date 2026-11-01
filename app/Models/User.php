@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +12,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-class User extends Authenticatable
+/**
+ * Implementing MustVerifyEmail turns on the "verify your e-mail" flow:
+ * the Registered event sends the signed link (FR-1) and the profile page can
+ * show the unverified banner. Until the address is confirmed the account is
+ * still usable, so a flaky mail server never locks a student out.
+ */
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -65,6 +71,60 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_blocked' => 'boolean',
         ];
+    }
+
+    /**
+     * Clean up everything the database cascade cannot reach when an account is
+     * deleted (self-service from the profile page or by an administrator).
+     *
+     * Posts, comments, likes, follows, enrollments, notifications and the
+     * reports the user filed all disappear through foreign keys. The two
+     * exceptions handled here are the polymorphic reports about the user's
+     * content and the uploaded files on the public disk.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            $postIds = $user->posts()->pluck('posts.id');
+
+            // Reports about the user's own comments *and* about comments other
+            // people left on the user's posts: the post cascade removes those
+            // comments without firing their model events.
+            $commentIds = Comment::query()
+                ->where(function ($query) use ($user, $postIds): void {
+                    $query->where('user_id', $user->id);
+
+                    if ($postIds->isNotEmpty()) {
+                        $query->orWhereIn('post_id', $postIds);
+                    }
+                })
+                ->pluck('comments.id');
+
+            if ($postIds->isNotEmpty()) {
+                Report::query()
+                    ->where('reportable_type', Post::class)
+                    ->whereIn('reportable_id', $postIds)
+                    ->delete();
+            }
+
+            if ($commentIds->isNotEmpty()) {
+                Report::query()
+                    ->where('reportable_type', Comment::class)
+                    ->whereIn('reportable_id', $commentIds)
+                    ->delete();
+            }
+
+            // Uploaded post images are files, not rows.
+            $user->posts()
+                ->whereNotNull('image')
+                ->pluck('image')
+                ->each(fn (string $image) => Storage::disk('public')->delete($image));
+
+            // The profile photo (FR-4).
+            if ($user->photo) {
+                Storage::disk('public')->delete($user->photo);
+            }
+        });
     }
 
     /* ---------------------------------------------------------------

@@ -94,7 +94,7 @@
             <div class="card edu-card overflow-hidden">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 edu-table-sticky edu-table-cards">
-                        <caption class="visually-hidden">{{ __('All accounts, newest first') }}</caption>
+                        <caption class="visually-hidden">{{ __('All accounts, sorted by name') }}</caption>
                         <thead>
                             <tr>
                                 <th scope="col">{{ __('User') }}</th>

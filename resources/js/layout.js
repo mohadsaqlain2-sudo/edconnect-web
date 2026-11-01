@@ -27,6 +27,11 @@ function applyState(collapsed) {
             icon.classList.toggle('bi-layout-sidebar', collapsed);
         }
     });
+
+    // Charts and other containers re-measure after the column changed width.
+    document.dispatchEvent(new CustomEvent('edu:sidebar-toggled', {
+        detail: { collapsed },
+    }));
 }
 
 function storeState(collapsed) {
@@ -109,10 +114,16 @@ function bootMobileSearch() {
     }
 
     const input = panel.querySelector('[data-search-input]');
+    const icon = toggle.querySelector('[data-mobile-search-icon]');
 
     const setOpen = (open) => {
         panel.hidden = !open;
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        if (icon) {
+            icon.classList.toggle('bi-search', !open);
+            icon.classList.toggle('bi-x-lg', open);
+        }
 
         if (open) {
             window.requestAnimationFrame(() => input?.focus());

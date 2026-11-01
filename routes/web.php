@@ -235,6 +235,8 @@ Route::middleware(['auth', 'not.blocked'])->group(function () {
 
     // FR-18 / FR-20 / FR-22: the embedded Jitsi Meet room.
     Route::get('/classes/{classRoom}/room', LiveClassController::class)->name('classes.room');
+    // Jitsi sends the user here after hangup so the flash survives the reload.
+    Route::get('/classes/{classRoom}/leave', [LiveClassController::class, 'leave'])->name('classes.leave');
 });
 
 // Student only: enroll / unenroll and "my enrolled classes" (FR-21).

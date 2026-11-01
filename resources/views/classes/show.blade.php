@@ -151,7 +151,8 @@
                                 {{-- Status switches, limited to the allowed transitions (FR-24) --}}
                                 <div class="d-flex flex-wrap gap-2">
                                     @foreach ($classRoom->allowedTransitions() as $next)
-                                        <form method="POST" action="{{ route('classes.status', $classRoom) }}" class="flex-grow-1">
+                                        <form method="POST" action="{{ route('classes.status', $classRoom) }}" class="flex-grow-1"
+                                              data-confirm="{{ __('Change the class status to :status?', ['status' => __($next)]) }}">
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $next }}">

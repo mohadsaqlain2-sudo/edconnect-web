@@ -219,12 +219,9 @@ class PostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        // Never leave the uploaded file behind on disk.
-        if ($post->image) {
-            Storage::disk('public')->delete($post->image);
-        }
-
-        // Comments and likes disappear through the cascade rules on the tables.
+        // The Post model removes the uploaded image, the reports about the post
+        // and the reports about its comments. Comments and likes disappear
+        // through the cascade rules on the tables.
         $post->delete();
 
         return redirect()

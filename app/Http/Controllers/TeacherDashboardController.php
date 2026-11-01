@@ -35,20 +35,20 @@ class TeacherDashboardController extends Controller
         $teacher = $request->user();
         $mine = $teacher->classes();
 
-        // Hero: the next scheduled class, or a class that is live right now.
+        // Hero: a class that is live right now wins over the next scheduled one.
         $nextClass = (clone $mine)
-            ->upcoming()
+            ->where('status', ClassRoom::STATUS_LIVE)
             ->withCount('students')
             ->with(['students' => fn ($query) => $query->orderBy('name')->limit(6)])
+            ->orderByDesc('date')
+            ->orderByDesc('time')
             ->first();
 
         if (! $nextClass) {
             $nextClass = (clone $mine)
-                ->where('status', ClassRoom::STATUS_LIVE)
+                ->upcoming()
                 ->withCount('students')
                 ->with(['students' => fn ($query) => $query->orderBy('name')->limit(6)])
-                ->orderByDesc('date')
-                ->orderByDesc('time')
                 ->first();
         }
 

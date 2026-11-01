@@ -487,6 +487,7 @@ button:focus-visible,
 @media (orientation: landscape) and (max-height: 520px) {
     :root {
         --edu-navbar-height: 56px;
+        --edu-mobile-nav-height: 0px;
     }
 
     .edu-navbar {
@@ -529,6 +530,7 @@ button:focus-visible,
     .edu-room-sheet {
         position: fixed;
         inset: auto 0 0 0;
+        bottom: var(--edu-mobile-nav-height);
         z-index: calc(var(--edu-z-mobilenav) - 1);
         max-height: 75vh;
         max-height: 75dvh;

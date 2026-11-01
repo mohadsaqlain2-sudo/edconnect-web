@@ -9,6 +9,7 @@
     $groups = match ($role) {
         \App\Models\User::ROLE_ADMIN => [
             ['label' => 'Overview', 'items' => [
+                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'admin.dashboard'],
                 ['label' => 'Style Guide', 'icon' => 'bi-palette', 'route' => 'admin.style-guide'],
             ]],
             ['label' => 'Manage', 'items' => [
@@ -24,6 +25,7 @@
         ],
         \App\Models\User::ROLE_TEACHER => [
             ['label' => 'Teaching', 'items' => [
+                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'teacher.dashboard'],
                 ['label' => 'My Classes', 'icon' => 'bi-easel', 'route' => 'classes.index'],
                 ['label' => 'Create Class', 'icon' => 'bi-plus-square', 'route' => 'classes.create'],
                 ['label' => 'Discover', 'icon' => 'bi-compass', 'route' => 'classes.discover'],
@@ -38,6 +40,7 @@
         ],
         default => [
             ['label' => 'Learning', 'items' => [
+                ['label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'route' => 'student.dashboard'],
                 ['label' => 'Browse Classes', 'icon' => 'bi-search', 'route' => 'classes.discover'],
                 ['label' => 'My Classes', 'icon' => 'bi-journal-bookmark', 'route' => 'student.classes'],
             ]],

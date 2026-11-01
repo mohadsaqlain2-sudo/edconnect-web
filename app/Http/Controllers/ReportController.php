@@ -44,6 +44,12 @@ class ReportController extends Controller
             abort(404);
         }
 
+        // A comment inherits the visibility of its post: if the post was
+        // hidden, the comment is gone from every page as well.
+        if ($reportable instanceof Comment && $reportable->post?->is_hidden) {
+            abort(404);
+        }
+
         $user = $request->user();
 
         // One report per user per item (also enforced by a unique index).

@@ -7,7 +7,7 @@
         <div class="d-flex align-items-center gap-3 mb-2">
             @if ($user->photo)
                 {{-- Escaped attribute value; the photo lives on the public disk --}}
-                <img src="{{ $user->photoUrl() }}" alt="{{ $user->name }}" class="avatar" loading="lazy" decoding="async">
+                <img src="{{ $user->photoUrl() }}" alt="{{ $user->name }}" class="avatar" width="40" height="40" loading="lazy" decoding="async">
             @else
                 {{-- Fallback: a circle with the first letter of the name --}}
                 <span class="avatar bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center justify-content-center fw-bold"
@@ -18,10 +18,13 @@
 
             <div>
                 <div class="fw-semibold">{!! $nameHtml ?? e($user->name) !!}</div>
-                <div class="small text-muted text-capitalize">
-                    <i class="bi bi-person-badge me-1"></i>{{ $user->role }}
+                <div class="small text-muted d-flex align-items-center flex-wrap gap-1">
+                    {{-- A real badge, so the role is recognisable at a glance (FR-14). --}}
+                    <span class="badge rounded-pill text-bg-light border text-capitalize fw-normal">
+                        <i class="bi bi-person-badge me-1" aria-hidden="true"></i>{{ $user->role }}
+                    </span>
                     @if ($user->subject)
-                        &middot; {{ $user->subject }}
+                        <span>{{ $user->subject }}</span>
                     @endif
                 </div>
             </div>
@@ -32,9 +35,13 @@
         @endif
 
         @if (isset($user->followers_count))
+            {{-- The follow AJAX refreshes this number in place (FR-11). --}}
             <div class="small text-muted mb-2">
                 <i class="bi bi-people me-1"></i>
-                {{ trans_choice(':count follower|:count followers', $user->followers_count, ['count' => $user->followers_count]) }}
+                <span data-followers-count data-user-id="{{ $user->id }}"
+                      data-label-singular="{{ __('follower') }}"
+                      data-label-plural="{{ __('followers') }}">{{ $user->followers_count }}</span>
+                <span data-follower-label>{{ trans_choice('follower|followers', $user->followers_count) }}</span>
             </div>
         @endif
 

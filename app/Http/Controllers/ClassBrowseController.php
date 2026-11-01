@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassRoom;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -19,33 +20,55 @@ class ClassBrowseController extends Controller
 
     /**
      * Upcoming (and currently running) classes, with a search box and a
-     * subject filter (FR-17).
+     * subject + teacher filter (FR-17).
      */
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q'));
+
+        // A very long query is pointless (and wasteful); cap it before the
+        // LIKE pattern is built.
+        $search = mb_substr($search, 0, 100);
+
         $subject = $request->query('subject');
+        $teacher = $request->query('teacher');
         $date = trim((string) $request->query('date'));
 
         // Anything that is not YYYY-MM-DD is ignored instead of erroring.
         $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : '';
+
+        // Anything that is not a positive integer is ignored as well.
+        $teacher = is_scalar($teacher) && ctype_digit((string) $teacher) && (int) $teacher > 0
+            ? (int) $teacher
+            : 0;
 
         $query = ClassRoom::query()
             ->visible()
             ->with('teacher:id,name,subject')
             ->withCount('students');
 
-        // Search in the title and in the teacher's name.
+        // Search in the title, in the subject and in the teacher's name.
+        // LIKE wildcards in the user's text are escaped, so searching for "%"
+        // or "_" matches those characters instead of everything.
         if ($search !== '') {
-            $query->where(function (Builder $inner) use ($search): void {
-                $inner->where('title', 'like', '%'.$search.'%')
-                    ->orWhereHas('teacher', fn (Builder $teacher) => $teacher->where('name', 'like', '%'.$search.'%'));
+            $pattern = $this->likePattern($search);
+
+            $query->where(function (Builder $inner) use ($pattern): void {
+                $inner->whereRaw("title LIKE ? ESCAPE '!'", [$pattern])
+                    ->orWhereRaw("subject LIKE ? ESCAPE '!'", [$pattern])
+                    ->orWhereHas('teacher', fn (Builder $teacher) => $teacher
+                        ->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]));
             });
         }
 
         // Filter on one subject.
         if (is_string($subject) && $subject !== '') {
             $query->where('subject', $subject);
+        }
+
+        // Filter on one teacher.
+        if ($teacher > 0) {
+            $query->where('teacher_id', $teacher);
         }
 
         // Filter on one calendar day.
@@ -68,8 +91,10 @@ class ClassBrowseController extends Controller
         return view('classes.discover', [
             'classes' => $classes,
             'subjects' => $this->subjects(),
+            'teachers' => $this->teachers(),
             'search' => $search,
             'subject' => is_string($subject) ? $subject : '',
+            'teacher' => $teacher,
             'date' => $date,
             // So the cards can show "Enrolled" without a query each.
             'enrolledIds' => $this->enrolledIds($request),
@@ -95,8 +120,8 @@ class ClassBrowseController extends Controller
             'isOwner' => $isOwner,
             'isEnrolled' => $isEnrolled,
             // The room opens for the teacher at any time, for a student only
-            // while the class is live (FR-20).
-            'canJoin' => $isOwner || $user->isAdmin() || ($isEnrolled && $classRoom->isLive()),
+            // while the class is live (FR-20). Admins moderate, they never join.
+            'canJoin' => $isOwner || ($isEnrolled && $classRoom->isLive()),
             // A short preview; the full list lives on classes.students.
             'previewStudents' => $classRoom->students()
                 ->orderBy('name')
@@ -149,6 +174,19 @@ class ClassBrowseController extends Controller
     }
 
     /**
+     * All teachers who have at least one visible class, for the filter.
+     *
+     * @return Collection<int, User>
+     */
+    private function teachers(): Collection
+    {
+        return User::query()
+            ->whereIn('id', ClassRoom::query()->visible()->select('teacher_id'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'subject']);
+    }
+
+    /**
      * Ids of the classes the current student is already enrolled in.
      *
      * @return Collection<int, int>
@@ -160,5 +198,13 @@ class ClassBrowseController extends Controller
         return $user !== null && $user->isStudent()
             ? $user->enrolledClasses()->pluck('classes.id')
             : collect();
+    }
+
+    /**
+     * Escape LIKE wildcards in a search term (MySQL and SQLite safe).
+     */
+    private function likePattern(string $term): string
+    {
+        return '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $term).'%';
     }
 }

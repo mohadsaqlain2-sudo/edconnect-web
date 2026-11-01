@@ -71,13 +71,10 @@ class ProfileController extends Controller
         // DeleteAccountRequest validates the password in the "userDeletion" bag.
         $user = $request->user();
 
-        // Do not leave an orphan file behind on the disk.
-        if ($user->photo) {
-            Storage::disk('public')->delete($user->photo);
-        }
-
         Auth::logout();
 
+        // The User model deletes the photo, the post images and the reports
+        // about this user's content in its deleting hook.
         $user->delete();
 
         $request->session()->invalidate();

@@ -49,6 +49,22 @@ class SearchTest extends TestCase
             ->assertSee('Ada Lovelace');
     }
 
+    public function test_people_results_show_a_role_badge_and_a_follow_button(): void
+    {
+        $me = User::factory()->student()->create();
+        User::factory()->teacher()->create(['name' => 'Badge Beatrice']);
+
+        $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'Beatrice', 'tab' => 'users']))
+            ->assertOk()
+            ->assertSee('Badge Beatrice')
+            // The shared card renders a real role badge (FR-14).
+            ->assertSee('bi-person-badge', false)
+            ->assertSee('badge rounded-pill', false)
+            // The viewer can follow the teacher straight from the results (FR-11).
+            ->assertSee('data-follow-button', false);
+    }
+
     public function test_users_are_found_by_subject(): void
     {
         $me = User::factory()->create();
@@ -167,6 +183,57 @@ class SearchTest extends TestCase
      | Posts tab
      * --------------------------------------------------------------- */
 
+    public function test_hashtag_results_count_only_visible_posts(): void
+    {
+        $me = User::factory()->student()->create();
+        $hashtag = Hashtag::create(['name' => 'geometry']);
+
+        $visible = Post::factory()->count(2)->create();
+        $hidden = Post::factory()->hidden()->create();
+
+        $hashtag->posts()->attach($visible->pluck('id')->push($hidden->id));
+
+        $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'geometry', 'tab' => 'hashtags']))
+            ->assertOk()
+            ->assertSee('2 posts')
+            ->assertDontSee('3 posts');
+    }
+
+    public function test_people_results_are_paginated(): void
+    {
+        $me = User::factory()->student()->create();
+
+        foreach (range(1, 13) as $number) {
+            User::factory()->teacher()->create([
+                'name' => sprintf('Pagination Tutor %02d', $number),
+            ]);
+        }
+
+        $first = $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'Pagination', 'tab' => 'users']))
+            ->assertOk();
+
+        $this->assertSame(13, $first->viewData('users')->total());
+        $this->assertCount(12, $first->viewData('users')->items());
+
+        $second = $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'Pagination', 'tab' => 'users', 'page' => 2]))
+            ->assertOk();
+
+        $this->assertCount(1, $second->viewData('users')->items());
+    }
+
+    public function test_the_people_tab_has_a_friendly_empty_state(): void
+    {
+        $me = User::factory()->student()->create();
+
+        $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'NobodyHere', 'tab' => 'users']))
+            ->assertOk()
+            ->assertSee('No people found');
+    }
+
     public function test_posts_are_found_by_their_body_text(): void
     {
         $me = User::factory()->student()->create();
@@ -215,6 +282,17 @@ class SearchTest extends TestCase
             ->assertJsonFragment(['label' => '#adaptive']);
     }
 
+    public function test_the_suggestion_endpoint_hides_blocked_people(): void
+    {
+        $me = User::factory()->student()->create();
+        User::factory()->teacher()->blocked()->create(['name' => 'Blocked Bruno']);
+
+        $this->actingAs($me)
+            ->getJson(route('search.suggest', ['q' => 'Bruno']))
+            ->assertOk()
+            ->assertJsonCount(0, 'suggestions');
+    }
+
     public function test_the_suggestion_endpoint_shows_at_most_five_entries(): void
     {
         $me = User::factory()->student()->create();
@@ -246,9 +324,10 @@ class SearchTest extends TestCase
         $me = User::factory()->create();
         User::factory()->teacher()->create(['name' => 'Wildcard Wanda']);
 
-        // "%" must be searched as a literal character, not as "everything".
+        // "%%" is long enough to be searched, but must be two literal percent
+        // signs, not the "match everything" wildcard.
         $this->actingAs($me)
-            ->get(route('search.index', ['q' => '%', 'tab' => 'users']))
+            ->get(route('search.index', ['q' => '%%', 'tab' => 'users']))
             ->assertOk()
             ->assertDontSee('Wildcard Wanda');
     }

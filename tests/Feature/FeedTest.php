@@ -159,6 +159,86 @@ class FeedTest extends TestCase
         $this->assertDatabaseMissing('posts', ['id' => $post->id]);
     }
 
+    public function test_an_administrator_can_delete_a_post_but_not_edit_it(): void
+    {
+        $author = User::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'body' => 'The author owns these words.',
+        ]);
+
+        // Administrators moderate; they do not rewrite other people's posts.
+        $this->actingAs($admin)->get(route('posts.edit', $post))->assertForbidden();
+        $this->actingAs($admin)
+            ->patch(route('posts.update', $post), ['body' => 'Rewritten'])
+            ->assertForbidden();
+
+        $this->assertSame('The author owns these words.', $post->fresh()->body);
+
+        // They may remove the post, though (PostPolicy::delete).
+        $this->actingAs($admin)
+            ->delete(route('posts.destroy', $post))
+            ->assertRedirect(route('feed.index'));
+
+        $this->assertDatabaseMissing('posts', ['id' => $post->id]);
+    }
+
+    public function test_a_post_image_is_stored_in_the_posts_directory(): void
+    {
+        Storage::fake('public');
+
+        $author = User::factory()->create();
+
+        $this->actingAs($author)->post(route('posts.store'), [
+            'body' => 'A post with an image',
+            'image' => UploadedFile::fake()->image('classroom.png', 1200, 800)->mimeType('image/png'),
+        ])->assertRedirect(route('feed.index'));
+
+        $post = Post::latest('id')->firstOrFail();
+
+        $this->assertNotNull($post->image);
+        $this->assertStringStartsWith('posts/', $post->image);
+        // WebP when GD supports it, JPEG otherwise.
+        $this->assertMatchesRegularExpression('/\.(webp|jpg)$/', $post->image);
+        Storage::disk('public')->assertExists($post->image);
+
+        // The upload service re-encodes the file and caps it at 1600 px.
+        $dimensions = $post->imageDimensions();
+
+        $this->assertNotNull($dimensions);
+        $this->assertLessThanOrEqual(1600, $dimensions['width']);
+        $this->assertLessThanOrEqual(1600, $dimensions['height']);
+    }
+
+    public function test_replacing_a_post_image_deletes_the_old_file(): void
+    {
+        Storage::fake('public');
+
+        $author = User::factory()->create();
+
+        $this->actingAs($author)->post(route('posts.store'), [
+            'body' => 'First version',
+            'image' => UploadedFile::fake()->image('first.jpg', 800, 600),
+        ]);
+
+        $post = Post::latest('id')->firstOrFail();
+        $oldImage = $post->image;
+
+        Storage::disk('public')->assertExists($oldImage);
+
+        $this->actingAs($author)->patch(route('posts.update', $post), [
+            'body' => 'Second version',
+            'image' => UploadedFile::fake()->image('second.jpg', 800, 600),
+        ])->assertRedirect(route('posts.show', $post));
+
+        $newImage = $post->fresh()->image;
+
+        $this->assertNotSame($oldImage, $newImage);
+        Storage::disk('public')->assertMissing($oldImage);
+        Storage::disk('public')->assertExists($newImage);
+    }
+
     public function test_deleting_a_post_removes_its_image_file(): void
     {
         Storage::fake('public');
@@ -223,8 +303,23 @@ class FeedTest extends TestCase
         ]);
     }
 
+    public function test_a_hidden_post_cannot_be_liked_by_other_users(): void
+    {
+        $author = User::factory()->create();
+        $other = User::factory()->create();
+        $post = Post::factory()->hidden()->create(['user_id' => $author->id]);
+
+        // LikeController applies PostPolicy::view, so a moderated post cannot
+        // be probed through the like endpoint either.
+        $this->actingAs($other)
+            ->postJson(route('posts.like', $post))
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('likes', 0);
+    }
+
     /* ---------------------------------------------------------------
-     | Comments (FR-13)
+     | Comments (FR-10)
      * --------------------------------------------------------------- */
 
     public function test_a_user_can_comment_and_only_delete_their_own_comment(): void
@@ -261,15 +356,31 @@ class FeedTest extends TestCase
         $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
     }
 
-    public function test_the_post_author_can_delete_comments_under_their_post(): void
+    public function test_only_the_comment_author_or_an_admin_can_delete_a_comment(): void
     {
         $postAuthor = User::factory()->create();
         $post = Post::factory()->create(['user_id' => $postAuthor->id]);
-        $comment = Comment::factory()->create(['post_id' => $post->id]);
+        $commentAuthor = User::factory()->create();
 
+        $comment = Comment::factory()->create([
+            'post_id' => $post->id,
+            'user_id' => $commentAuthor->id,
+        ]);
+
+        // Writing the post does not make somebody the owner of its comments.
         $this->actingAs($postAuthor)
             ->deleteJson(route('comments.destroy', $comment))
-            ->assertOk();
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('comments', ['id' => $comment->id]);
+
+        // An administrator may remove any comment for moderation.
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->deleteJson(route('comments.destroy', $comment))
+            ->assertOk()
+            ->assertJson(['deleted' => true, 'count' => 0]);
 
         $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
     }
@@ -348,6 +459,87 @@ class FeedTest extends TestCase
             ->assertDontSee('BODY-HIDDEN');
     }
 
+    public function test_the_feed_is_paginated_ten_per_page_and_shows_the_newest_first(): void
+    {
+        $me = User::factory()->create();
+
+        // Twelve posts with a known order: "POST-12" is the newest.
+        foreach (range(1, 12) as $number) {
+            Post::factory()->create([
+                'user_id' => $me->id,
+                'body' => 'POST-'.$number,
+                'created_at' => now()->subMinutes(13 - $number),
+            ]);
+        }
+
+        $firstPage = $this->actingAs($me)->get(route('feed.index'))->assertOk();
+
+        $firstPage->assertViewHas('posts', static function ($posts): bool {
+            return $posts->count() === 10 && $posts->total() === 12;
+        });
+
+        $this->assertSame('POST-12', $firstPage->viewData('posts')->first()->body);
+        $this->assertSame('POST-3', $firstPage->viewData('posts')->last()->body);
+
+        $secondPage = $this->actingAs($me)->get(route('feed.index', ['page' => 2]))->assertOk();
+
+        $this->assertSame(
+            ['POST-2', 'POST-1'],
+            $secondPage->viewData('posts')->pluck('body')->all()
+        );
+    }
+
+    public function test_hidden_comments_are_not_shown_or_counted(): void
+    {
+        $me = User::factory()->create();
+        $post = Post::factory()->create(['user_id' => $me->id]);
+
+        Comment::factory()->create([
+            'post_id' => $post->id,
+            'body' => 'VISIBLE-COMMENT',
+        ]);
+        Comment::factory()->hidden()->create([
+            'post_id' => $post->id,
+            'body' => 'HIDDEN-COMMENT',
+        ]);
+
+        $feed = $this->actingAs($me)->get(route('feed.index'))->assertOk()
+            ->assertSee('VISIBLE-COMMENT')
+            ->assertDontSee('HIDDEN-COMMENT');
+
+        $this->assertSame(1, $feed->viewData('posts')->first()->comments_count);
+
+        $this->actingAs($me)
+            ->get(route('posts.show', $post))
+            ->assertOk()
+            ->assertSee('VISIBLE-COMMENT')
+            ->assertDontSee('HIDDEN-COMMENT');
+    }
+
+    public function test_search_results_and_feed_suggestions_use_the_ajax_follow_button(): void
+    {
+        $me = User::factory()->student()->create();
+        $teacher = User::factory()->teacher()->create([
+            'name' => 'Zebracorn Teacher',
+            'is_blocked' => false,
+        ]);
+
+        // Search tab: the shared user card renders a real form with the AJAX hooks.
+        $this->actingAs($me)
+            ->get(route('search.index', ['q' => 'Zebracorn', 'tab' => 'users']))
+            ->assertOk()
+            ->assertSee('data-follow-form', false)
+            ->assertSee('data-follow-url="'.route('follows.store', $teacher).'"', false)
+            ->assertSee('data-followers-count', false);
+
+        // Feed sidebar: "Who to follow" uses exactly the same partial.
+        $this->actingAs($me)
+            ->get(route('feed.index'))
+            ->assertOk()
+            ->assertSee('data-follow-form', false)
+            ->assertSee('data-followers-count', false);
+    }
+
     public function test_the_feed_shows_an_empty_state_without_posts(): void
     {
         $me = User::factory()->create();
@@ -403,6 +595,60 @@ class FeedTest extends TestCase
             ['laravel', 'php'],
             $post->hashtags()->orderBy('name')->pluck('name')->all()
         );
+    }
+
+    public function test_hashtags_support_unicode_and_are_lower_cased_everywhere(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('posts.store'), [
+            'body' => '#Éducation #数学 #Café_2026 #ÉDUCATION',
+        ])->assertRedirect(route('feed.index'));
+
+        $post = Post::latest('id')->firstOrFail();
+
+        $this->assertEqualsCanonicalizing(
+            ['éducation', '数学', 'café_2026'],
+            $post->hashtags()->pluck('name')->all()
+        );
+
+        $this->assertDatabaseHas('hashtags', ['name' => 'éducation']);
+        $this->assertDatabaseHas('hashtags', ['name' => '数学']);
+        $this->assertDatabaseHas('hashtags', ['name' => 'café_2026']);
+
+        $html = (string) app(HashtagService::class)->linkify('#Éducation #数学');
+
+        $this->assertStringContainsString('href="'.route('hashtags.show', ['hashtag' => 'éducation']).'"', $html);
+        $this->assertStringContainsString('href="'.route('hashtags.show', ['hashtag' => '数学']).'"', $html);
+        $this->assertStringContainsString('>#éducation</a>', $html);
+    }
+
+    public function test_editing_a_post_resyncs_and_removes_old_hashtags(): void
+    {
+        $user = User::factory()->create();
+        $post = Post::factory()->create([
+            'user_id' => $user->id,
+            'body' => 'First #laravel post',
+        ]);
+
+        app(HashtagService::class)->sync($post, $post->body);
+
+        $this->actingAs($user)
+            ->patch(route('posts.update', $post), [
+                'body' => 'Second #symfony post',
+            ])
+            ->assertRedirect(route('posts.show', $post));
+
+        $this->assertSame(
+            ['symfony'],
+            $post->fresh()->hashtags()->pluck('name')->all()
+        );
+
+        $this->assertDatabaseHas('hashtags', ['name' => 'laravel']);
+        $this->assertDatabaseMissing('hashtag_post', [
+            'post_id' => $post->id,
+            'hashtag_id' => Hashtag::where('name', 'laravel')->value('id'),
+        ]);
     }
 
     public function test_hashtag_links_are_xss_safe(): void

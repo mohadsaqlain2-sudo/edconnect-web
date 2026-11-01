@@ -139,7 +139,7 @@
                                                 @method('PATCH')
                                                 <button type="submit" class="btn btn-sm btn-outline-{{ $classRoom->is_hidden ? 'success' : 'warning' }}">
                                                     <i class="bi bi-eye{{ $classRoom->is_hidden ? '' : '-slash' }} me-1" aria-hidden="true"></i>
-                                                    {{ $classRoom->is_hidden ? __('Unhide') : __('Hide') }}
+                                                    {{ $classRoom->is_hidden ? __('Unhide') : __('Hide (cancel)') }}
                                                 </button>
                                             </form>
 

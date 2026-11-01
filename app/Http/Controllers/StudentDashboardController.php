@@ -47,15 +47,15 @@ class StudentDashboardController extends Controller
             ->limit(self::UPCOMING_LIMIT)
             ->get();
 
-        // Hero: the next scheduled class, falling back to a class that is live.
-        $nextClass = $upcomingClasses->first();
+        // Hero: a class that is live right now wins over the next scheduled one.
+        $nextClass = $student->enrolledClasses()
+            ->where('classes.status', ClassRoom::STATUS_LIVE)
+            ->with('teacher:id,name,subject,photo')
+            ->withCount('students')
+            ->first();
 
         if (! $nextClass) {
-            $nextClass = $student->enrolledClasses()
-                ->where('classes.status', ClassRoom::STATUS_LIVE)
-                ->with('teacher:id,name,subject,photo')
-                ->withCount('students')
-                ->first();
+            $nextClass = $upcomingClasses->first();
         }
 
         $heroClass = $nextClass?->load([

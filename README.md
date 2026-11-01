@@ -51,8 +51,12 @@ and which test) is in [`docs/REQUIREMENTS-STATUS.md`](docs/REQUIREMENTS-STATUS.m
 The Phase 8 audit trail is split across
 [`docs/SECURITY.md`](docs/SECURITY.md), [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)
 and [`docs/TEST-MATRIX.md`](docs/TEST-MATRIX.md); the phase-by-phase delivery
-notes are in [`docs/`](docs/), with the final phase summarised in
-[`docs/PHASE-8-DELIVERABLE.md`](docs/PHASE-8-DELIVERABLE.md).
+notes are in [`docs/`](docs/), with Phase 6 (notifications and search) in
+[`docs/PHASE-6-DELIVERABLE.md`](docs/PHASE-6-DELIVERABLE.md), Phase 7 (reports
+and moderation) in
+[`docs/PHASE-7-DELIVERABLE.md`](docs/PHASE-7-DELIVERABLE.md), Phase 8 in
+[`docs/PHASE-8-DELIVERABLE.md`](docs/PHASE-8-DELIVERABLE.md) and the final
+release audit in [`docs/PHASE-9-DELIVERABLE.md`](docs/PHASE-9-DELIVERABLE.md).
 
 ---
 
@@ -186,24 +190,29 @@ php artisan test
 ```
 
 The suite covers authentication, role access, the feed, classes, notifications,
-search, profiles, seeders, reporting, admin management and the Phase 8
-security/performance/usability audit. Tests use SQLite in memory, the array
-session driver and the array mail driver, so they never touch the development
-database.
+search, profiles, seeders, reporting, admin management, the Phase 8
+security/performance/usability audit and the Phase 9 final-audit regressions.
+Tests use SQLite in memory, the array session driver and the array mail driver,
+so they never touch the development database.
 
-Last verified run (Phase 8 final):
+Last verified run (Phase 9 final):
 
 ```text
-Tests:  266 passed (1401 assertions)
+Tests:  317 passed (1709 assertions)
 ```
 
 Useful variations:
 
 ```bash
 php artisan test --filter=SmokeTest          # full role walkthrough
+php artisan test --filter=NotificationTest   # FR-23 … FR-25
+php artisan test --filter=SearchTest         # FR-14
 php artisan test --filter=ReportTest         # FR-32 … FR-34
 php artisan test --filter=AdminManagementTest
+php artisan test --filter=PhaseSevenTest     # cross-cutting Phase 7 guarantees
+php artisan test --filter=BlockedUserTest    # blocked login and session ejection
 php artisan test --filter=PhaseEightTest     # security, performance, usability
+php artisan test --filter=PhaseNineTest      # final-audit regressions
 php artisan test --parallel                  # if your machine supports it
 ```
 
@@ -301,7 +310,7 @@ scripts/backup.sh           database + uploads backup
 
 ## Requirement status
 
-Every feature shipped across the seven phases is mapped to its requirement ID,
+Every feature shipped across the eight phases is mapped to its requirement ID,
 the files that implement it and the test that proves it in
 [`docs/REQUIREMENTS-STATUS.md`](docs/REQUIREMENTS-STATUS.md). Summary:
 
@@ -315,8 +324,9 @@ the files that implement it and the test that proves it in
 | 6 | Notifications, class reminders, search | done |
 | 7 | Admin analytics, user/content moderation, report queue, hardening | done |
 | 8 | Security/performance/usability audit, FR-1…FR-34 test matrix, docs and deployment guide | done |
+| 9 | Final audit: strict FR/UC/NFR tables, database audit, orphan-report and N+1 fixes, release smoke test | done |
 
-Last verified run: `php artisan test` → **266 passed, 1401 assertions**.
+Last verified run: `php artisan test` → **317 passed, 1709 assertions**.
 
 ---
 
@@ -336,13 +346,17 @@ The Phase 8 audit is documented in three places rather than repeated here:
 - [`docs/TEST-MATRIX.md`](docs/TEST-MATRIX.md) — FR-1 … FR-34 with the test that
   proves each one, the cross-cutting Phase 8 checks and the manual sign-off list
   (responsive breakpoints, real SMTP, Jitsi call, queue worker, MySQL restore).
-- [`docs/PHASE-8-DELIVERABLE.md`](docs/PHASE-8-DELIVERABLE.md) — the phase
+- [`docs/PHASE-9-DELIVERABLE.md`](docs/PHASE-9-DELIVERABLE.md) — the final
+  audit: strict FR/UC/NFR tables, SRS §4 database audit, every finding with its
+  full fixed code, the Admin/Teacher/Student smoke test and the SRS §7 roadmap.
+- [`docs/PHASE-8-DELIVERABLE.md`](docs/PHASE-8-DELIVERABLE.md) — the Phase 8
   summary: changed files, commands, FR table, evidence and "Done when".
 
 Highlights that are easy to verify locally:
 
 ```bash
-php artisan test --filter=PhaseEightTest      # 26 tests, 246 assertions
+php artisan test --filter=PhaseEightTest      # 26 tests, 251 assertions
+php artisan test --filter=PhaseNineTest       # 10 tests, 44 assertions
 php artisan route:list --except-vendor        # every route with its middleware
 php artisan view:cache && php artisan view:clear
 php artisan config:cache && php artisan route:cache && php artisan optimize:clear
@@ -439,8 +453,3 @@ These are reported honestly rather than hidden:
 4. **SQLite in tests, MySQL in development/production.** The SRS asks for MySQL
    8; the application runs on MySQL. SQLite is only used to keep the automated
    test suite fast and isolated.
-5. **The Jitsi settings live in `config/jitsi.php`.** The SRS names
-   `config/services.php`; the Jitsi domain and script URL sit in their own config
-   file instead, still read from `JITSI_DOMAIN` / `JITSI_SCRIPT_URL` in `.env`.
-   The behaviour asked for (switch to a self-hosted Jitsi server without touching
-   code) is unchanged.

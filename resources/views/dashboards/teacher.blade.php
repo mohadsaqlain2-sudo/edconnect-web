@@ -85,7 +85,8 @@
                                     <i class="bi bi-camera-video" aria-hidden="true"></i> {{ __('Join live') }}
                                 </a>
                             @else
-                                <form method="POST" action="{{ route('classes.status', $nextClass) }}">
+                                <form method="POST" action="{{ route('classes.status', $nextClass) }}"
+                                      data-confirm="{{ __('Start this class now? Students will be able to join.') }}">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="live">
@@ -259,7 +260,8 @@
                                             </li>
                                         @elseif ($class->canTransitionTo(\App\Models\ClassRoom::STATUS_LIVE))
                                             <li>
-                                                <form method="POST" action="{{ route('classes.status', $class) }}">
+                                                <form method="POST" action="{{ route('classes.status', $class) }}"
+                                                      data-confirm="{{ __('Start this class now? Students will be able to join.') }}">
                                                     @csrf
                                                     @method('PATCH')
                                                     <input type="hidden" name="status" value="live">

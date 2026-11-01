@@ -221,6 +221,7 @@ password-reset pages.
 | `GET\|HEAD` | `classes/{classRoom}/edit` | `classes.edit` | `web`, `auth`, `not.blocked`, `role:teacher` |
 | `POST` | `classes/{classRoom}/enroll` | `classes.enroll` | `web`, `auth`, `not.blocked`, `role:student` |
 | `DELETE` | `classes/{classRoom}/enroll` | `classes.unenroll` | `web`, `auth`, `not.blocked`, `role:student` |
+| `GET\|HEAD` | `classes/{classRoom}/leave` | `classes.leave` | `web`, `auth`, `not.blocked` |
 | `GET\|HEAD` | `classes/{classRoom}/room` | `classes.room` | `web`, `auth`, `not.blocked` |
 | `PATCH` | `classes/{classRoom}/status` | `classes.status` | `web`, `auth`, `not.blocked`, `role:teacher` |
 | `GET\|HEAD` | `classes/{classRoom}/students` | `classes.students` | `web`, `auth`, `not.blocked`, `role:teacher` |

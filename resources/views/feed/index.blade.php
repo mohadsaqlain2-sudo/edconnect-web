@@ -21,9 +21,9 @@
     </x-slot>
 
     <div class="container-xxl px-3 px-lg-4">
-        <div class="row g-4 justify-content-center">
+        <div class="row g-4 justify-content-center edu-feed-row">
             {{-- Main column: composer + feed --}}
-            <div class="col-12 col-lg-8">
+            <div class="col-12 col-md-8">
                 {{-- Compose box (FR-7) --}}
                 <section class="card edu-card mb-4" aria-labelledby="compose-title">
                     <div class="card-body">
@@ -63,7 +63,7 @@
             </div>
 
             {{-- Right sidebar widgets --}}
-            <aside class="col-12 col-lg-4">
+            <aside class="col-12 col-md-4">
                 @unless (auth()->user()->isAdmin())
                     <section class="card edu-card mb-3" aria-labelledby="who-to-follow-title">
                         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -98,7 +98,10 @@
                                         </div>
                                         <div class="edu-list-meta">
                                             <i class="bi bi-people me-1" aria-hidden="true"></i>
-                                            {{ trans_choice(':count follower|:count followers', $person->followers_count, ['count' => $person->followers_count]) }}
+                                            <span data-followers-count data-user-id="{{ $person->id }}"
+                                                  data-label-singular="{{ __('follower') }}"
+                                                  data-label-plural="{{ __('followers') }}">{{ $person->followers_count }}</span>
+                                            <span data-follower-label>{{ trans_choice('follower|followers', $person->followers_count) }}</span>
                                         </div>
                                     </div>
 

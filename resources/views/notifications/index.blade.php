@@ -86,8 +86,8 @@
                                         <div class="flex-grow-1 min-w-0">
                                             <div class="d-flex align-items-start gap-2">
                                                 @unless ($notification->read_at)
-                                                    <span class="edu-notif-dot mt-2" aria-hidden="true"></span>
-                                                    <span class="visually-hidden">{{ __('Unread') }}</span>
+                                                    <span class="edu-notif-dot mt-2" data-notification-unread-dot aria-hidden="true"></span>
+                                                    <span class="visually-hidden" data-notification-unread-label>{{ __('Unread') }}</span>
                                                 @endunless
 
                                                 {{-- Opening the entry marks it read and follows its link (FR-25). --}}

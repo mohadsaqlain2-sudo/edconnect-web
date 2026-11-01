@@ -42,6 +42,10 @@ class UserProfileController extends Controller
             'classes' => $user->isTeacher()
                 ? $user->teachingClasses()
                     ->where('is_hidden', false)
+                    // The class cards show the teacher name and the student
+                    // count, so both are loaded for all six cards at once.
+                    ->with('teacher:id,name,subject')
+                    ->withCount('students')
                     ->orderByDesc('date')
                     ->orderByDesc('time')
                     ->take(6)

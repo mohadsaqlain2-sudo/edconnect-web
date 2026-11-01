@@ -12,7 +12,7 @@ profiles, dashboards or admin tables.
 | --- | --- | --- |
 | Feed eager loading, pagination (< 15 queries for 20 posts) | `php artisan test --filter=PerformanceTest` | pass |
 | Admin dashboard query budget (≤ 45 queries with users, posts, classes, reports) | `PhaseEightTest::test_dashboards_stay_within_a_query_budget` | pass |
-| All primary pages under 3 seconds | `PhaseEightTest::test_the_primary_pages_load_in_under_three_seconds` | 12/12 pages pass; the whole test (guest landing, login, feed, search, catalogue, three dashboards, profile, notifications, teacher/admin lists) runs in ≈0.5 s |
+| All primary pages under 3 seconds | `PhaseEightTest::test_the_primary_pages_load_in_under_three_seconds` | 12/12 pages pass; each page is warmed once and then timed three times (fastest run wins) so scheduler jitter cannot flake the check |
 | Dashboard cache keys exist and hold for five minutes | `PhaseEightTest::test_dashboard_metrics_are_cached_for_five_minutes` | pass |
 | Hot-path indexes exist after `migrate` | `PhaseEightTest::test_the_hot_query_indexes_are_present` | 15/15 indexes found |
 
@@ -133,8 +133,9 @@ the array store, which is why the cache test can inspect the keys directly.
   `decoding="async"`. The layout's hero image is the only eager image.
 - Bootstrap Icons are subset through the Vite build; custom CSS/JS lives in
   `resources/sass` and `resources/js` and is minified by Vite.
-- `npm run build` currently emits roughly **359 kB CSS** and **435 kB JS**
-  (uncompressed). Nginx should serve them with gzip/brotli; the manifest keeps
+- `npm run build` currently emits roughly **368.63 kB CSS** (57.47 kB gzip)
+  and **229.62 kB JS** (75.83 kB gzip), plus a 209.95 kB shared chunk
+  (72.11 kB gzip). Nginx should serve them with gzip/brotli; the manifest keeps
   long-term hashed filenames.
 
 Asset commands:

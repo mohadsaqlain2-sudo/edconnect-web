@@ -323,11 +323,12 @@ class ClassTest extends TestCase
         $scheduled = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
         $scheduled->students()->attach($student->id);
 
-        // Not live yet: a friendly redirect, not the room.
+        // Not live yet: the friendly "not started" page, not the room (FR-20).
         $this->actingAs($student)
             ->get(route('classes.room', $scheduled))
-            ->assertRedirect(route('classes.show', $scheduled))
-            ->assertSessionHas('error');
+            ->assertOk()
+            ->assertSee('This class has not started yet')
+            ->assertDontSee('data-jitsi', false);
 
         // The teacher may open the room at any time.
         $this->actingAs($teacher)->get(route('classes.room', $scheduled))->assertOk();
@@ -356,12 +357,16 @@ class ClassTest extends TestCase
         $response->assertOk();
         // The room name, the Jitsi domain and the retry button for a failed script.
         $response->assertSee($classRoom->room_name);
-        $response->assertSee(config('jitsi.domain'));
+        $response->assertSee(config('services.jitsi.domain'));
         $response->assertSee('data-jitsi', false);
         $response->assertSee('data-jitsi-retry', false);
         $response->assertSee($student->name);
         $response->assertSee($student->email);
-        // The hangup event sends the user to their dashboard.
+        // The class title is the Jitsi subject and the user's avatar travels too.
+        $response->assertSee('data-subject="'.e($classRoom->title).'"', false);
+        $response->assertSee('data-avatar="'.e(url($student->photoUrl())).'"', false);
+        // The hangup redirect lands on the class page with a flash message.
+        $response->assertSee(route('classes.leave', $classRoom));
         $response->assertSee(route('dashboard'));
 
         // The teacher is flagged as the moderator, the student is not.
@@ -690,5 +695,229 @@ class ClassTest extends TestCase
             ->assertSee('Starts in 2h 15m')
             ->assertSee('Live now')
             ->assertSee('Ended');
+
+        // The same wording is available as a Blade accessor.
+        $this->assertSame('Starts in 2h 15m', $soon->timeline_label);
+        $this->assertSame('Live now', $live->timeline_label);
+    }
+
+    /* -----------------------------------------------------------------
+     | Phase 5 audit additions: filters, strict transitions and leaving
+     * ----------------------------------------------------------------- */
+
+    /**
+     * The teacher's own list can be narrowed to one status (FR-15).
+     */
+    public function test_a_teacher_can_filter_their_classes_by_status(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        $scheduled = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Scheduled algebra',
+        ]);
+        $live = ClassRoom::factory()->live()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Live physics',
+        ]);
+        $completed = ClassRoom::factory()->completed()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Completed history',
+        ]);
+
+        $response = $this->actingAs($teacher)
+            ->get(route('classes.index', ['status' => ClassRoom::STATUS_SCHEDULED]));
+
+        $response->assertOk();
+        $response->assertSee('Scheduled algebra');
+        $response->assertDontSee('Live physics');
+        $response->assertDontSee('Completed history');
+        $this->assertSame(
+            [$scheduled->id],
+            $response->viewData('classes')->pluck('id')->all()
+        );
+        $this->assertSame(ClassRoom::STATUS_SCHEDULED, $response->viewData('status'));
+
+        // An unknown status is ignored instead of returning an empty list.
+        $all = $this->actingAs($teacher)
+            ->get(route('classes.index', ['status' => 'paused']));
+
+        $this->assertEqualsCanonicalizing(
+            [$scheduled->id, $live->id, $completed->id],
+            $all->viewData('classes')->pluck('id')->all()
+        );
+        $this->assertSame('', $all->viewData('status'));
+    }
+
+    /**
+     * Students can search the subject and filter on one teacher (FR-17).
+     */
+    public function test_a_student_can_search_by_subject_and_filter_by_teacher(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+
+        $student = User::factory()->student()->create();
+        $maria = User::factory()->teacher()->create(['name' => 'Maria Rossi']);
+        $david = User::factory()->teacher()->create(['name' => 'David Chen']);
+
+        $algebra = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $maria->id,
+            'title' => 'Algebra basics',
+            'subject' => 'Mathematics',
+        ]);
+
+        $physics = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $david->id,
+            'title' => 'Newton laws',
+            'subject' => 'Physics',
+        ]);
+
+        // Search now also looks inside the subject column.
+        $this->actingAs($student)
+            ->get(route('classes.discover', ['q' => 'Mathematics']))
+            ->assertSee('Algebra basics')
+            ->assertDontSee('Newton laws');
+
+        // Teacher filter: only Maria's classes.
+        $byTeacher = $this->actingAs($student)
+            ->get(route('classes.discover', ['teacher' => $maria->id]));
+
+        $byTeacher->assertOk();
+        $byTeacher->assertSee('Algebra basics');
+        $byTeacher->assertDontSee('Newton laws');
+        $byTeacher->assertSee('Maria Rossi');
+        $byTeacher->assertSee('David Chen'); // still available in the dropdown
+        $this->assertSame([$algebra->id], $byTeacher->viewData('classes')->pluck('id')->all());
+
+        // The teacher drop down only offers teachers who actually teach.
+        $this->assertSame(
+            [$maria->id, $david->id],
+            $byTeacher->viewData('teachers')->pluck('id')->sort()->values()->all()
+        );
+
+        // A nonsense teacher id is ignored, not a 500.
+        $this->actingAs($student)
+            ->get(route('classes.discover', ['teacher' => 'abc']))
+            ->assertOk()
+            ->assertSee('Algebra basics')
+            ->assertSee('Newton laws');
+
+        // The physics filter still works together with the teacher filter.
+        $this->actingAs($student)
+            ->get(route('classes.discover', ['subject' => 'Physics', 'teacher' => $maria->id]))
+            ->assertOk()
+            ->assertDontSee('Newton laws');
+
+        $this->assertNotNull($physics);
+    }
+
+    /**
+     * Only scheduled -> live -> completed is accepted (FR-21).
+     */
+    public function test_only_the_scheduled_live_completed_chain_is_allowed(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+
+        $scheduled = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
+        $live = ClassRoom::factory()->live()->create(['teacher_id' => $teacher->id]);
+        $completed = ClassRoom::factory()->completed()->create(['teacher_id' => $teacher->id]);
+
+        // A scheduled class cannot jump straight to completed.
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $scheduled), ['status' => ClassRoom::STATUS_COMPLETED])
+            ->assertSessionHas('error');
+        $this->assertSame(ClassRoom::STATUS_SCHEDULED, $scheduled->refresh()->status);
+
+        // A live class cannot go backwards.
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $live), ['status' => ClassRoom::STATUS_SCHEDULED])
+            ->assertSessionHas('error');
+        $this->assertSame(ClassRoom::STATUS_LIVE, $live->refresh()->status);
+
+        // A completed class cannot be reopened.
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $completed), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertSessionHas('error');
+        $this->assertSame(ClassRoom::STATUS_COMPLETED, $completed->refresh()->status);
+
+        // The legal chain still works.
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $scheduled), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertRedirect();
+        $this->assertSame(ClassRoom::STATUS_LIVE, $scheduled->refresh()->status);
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $scheduled), ['status' => ClassRoom::STATUS_COMPLETED])
+            ->assertRedirect();
+        $this->assertSame(ClassRoom::STATUS_COMPLETED, $scheduled->refresh()->status);
+    }
+
+    /**
+     * The hangup redirect returns to the class page with a flash message.
+     */
+    public function test_leaving_the_room_redirects_back_with_a_flash_message(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $student = User::factory()->student()->create();
+        $outsider = User::factory()->student()->create();
+
+        $classRoom = ClassRoom::factory()->live()->create(['teacher_id' => $teacher->id]);
+        $classRoom->students()->attach($student->id);
+
+        $this->actingAs($student)
+            ->get(route('classes.leave', $classRoom))
+            ->assertRedirect(route('classes.show', $classRoom))
+            ->assertSessionHas('success');
+
+        // The teacher can leave too; an unenrolled student cannot use the route.
+        $this->actingAs($teacher)->get(route('classes.leave', $classRoom))->assertRedirect();
+        $this->actingAs($outsider)->get(route('classes.leave', $classRoom))->assertForbidden();
+    }
+
+    /**
+     * The dashboards expose working join links and count the right classes.
+     */
+    public function test_the_dashboards_offer_working_join_buttons_and_upcoming_counts(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
+
+        $teacher = User::factory()->teacher()->create();
+        $student = User::factory()->student()->create();
+
+        $live = ClassRoom::factory()->live()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Live now class',
+            'date' => '2026-06-15',
+            'time' => '11:00',
+            'duration' => 120,
+        ]);
+
+        $future = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Future class',
+            'date' => '2026-06-20',
+            'time' => '10:00',
+            'duration' => 60,
+        ]);
+
+        $live->students()->attach($student->id);
+        $future->students()->attach($student->id);
+
+        // The student sees a real Join live link to the room.
+        $studentDashboard = $this->actingAs($student)->get(route('student.dashboard'));
+
+        $studentDashboard->assertOk();
+        $studentDashboard->assertSee(route('classes.room', $live), false);
+        $studentDashboard->assertSee('Join live');
+        $this->assertSame(1, $studentDashboard->viewData('stats')['upcoming']);
+
+        // The teacher sees the live room link and the correct upcoming count.
+        $teacherDashboard = $this->actingAs($teacher)->get(route('teacher.dashboard'));
+
+        $teacherDashboard->assertOk();
+        $teacherDashboard->assertSee(route('classes.room', $live), false);
+        $this->assertSame(1, $teacherDashboard->viewData('stats')['upcoming']);
     }
 }

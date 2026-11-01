@@ -6,10 +6,10 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\Report;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -40,7 +40,16 @@ class AdminReportController extends Controller
         $term = trim((string) $request->query('q', ''));
 
         $reports = Report::query()
-            ->with(['reporter:id,name,email', 'reportable'])
+            ->with([
+                'reporter:id,name,email',
+                // The table shows $report->reported_user for every row, so the
+                // author of each post/comment is eager loaded too: without it
+                // the page runs one extra query per report (N+1).
+                'reportable' => fn (MorphTo $morphTo) => $morphTo->morphWith([
+                    Post::class => ['user:id,name'],
+                    Comment::class => ['user:id,name'],
+                ]),
+            ])
             ->when($status, fn (Builder $query) => $query->where('status', $status))
             ->when($type, fn (Builder $query) => $query->where(
                 'reportable_type',
@@ -113,7 +122,11 @@ class AdminReportController extends Controller
         $content = $this->content($report);
 
         $content->update(['is_hidden' => true]);
-        $report->update(['status' => Report::STATUS_REVIEWED]);
+
+        // Hiding is one decision about the content, so every pending report
+        // about the same post or comment is resolved with it. Otherwise the
+        // queue would keep showing duplicates for content that is already gone.
+        $this->resolvePendingReportsFor($report);
 
         return back()->with('success', __('The :type has been hidden and the report marked as reviewed.', [
             'type' => strtolower($report->content_type),
@@ -142,19 +155,9 @@ class AdminReportController extends Controller
     {
         $content = $this->content($report);
 
-        $type = $report->reportable_type;
-        $id = $report->reportable_id;
-
-        if ($content instanceof Post && $content->image) {
-            Storage::disk('public')->delete($content->image);
-        }
-
+        // The Post / Comment model removes the reports that point at the
+        // content (and a post's image) in its deleting hook.
         $content->delete();
-
-        Report::query()
-            ->where('reportable_type', $type)
-            ->where('reportable_id', $id)
-            ->delete();
 
         return redirect()
             ->route('admin.reports.index')
@@ -228,6 +231,18 @@ class AdminReportController extends Controller
         abort_unless($content instanceof Post || $content instanceof Comment, 404);
 
         return $content;
+    }
+
+    /**
+     * Mark every still-pending report about the same content as reviewed.
+     */
+    private function resolvePendingReportsFor(Report $report): void
+    {
+        Report::query()
+            ->where('reportable_type', $report->reportable_type)
+            ->where('reportable_id', $report->reportable_id)
+            ->where('status', Report::STATUS_PENDING)
+            ->update(['status' => Report::STATUS_REVIEWED]);
     }
 
     /**

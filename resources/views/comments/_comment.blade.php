@@ -8,11 +8,18 @@
         \App\Models\User::ROLE_TEACHER => 'primary',
         default => 'success',
     };
+
+    // Hidden comments and comments under a hidden post are not reportable.
+    // "$post" is the surrounding post card / post page when there is one.
+    $parentPostHidden = isset($post) && $post instanceof \App\Models\Post && $post->is_hidden;
+    $canReport = ! $comment->is_hidden
+        && ! $parentPostHidden
+        && auth()->id() !== $comment->user_id;
 @endphp
 
 <div class="d-flex gap-3 py-3 border-bottom" data-comment-id="{{ $comment->id }}">
     @if ($author?->photo)
-        <img src="{{ $author->photoUrl() }}" alt="{{ $author->name }}" class="avatar" loading="lazy" decoding="async">
+        <img src="{{ $author->photoUrl() }}" alt="{{ $author->name }}" class="avatar" width="40" height="40" loading="lazy" decoding="async">
     @else
         <span class="avatar bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center justify-content-center fw-bold flex-shrink-0"
               role="img" aria-label="{{ $author?->name ?? __('Deleted user') }}">
@@ -51,8 +58,8 @@
         </form>
     @endcan
 
-    {{-- Report somebody else's comment (FR-32). --}}
-    @if (auth()->id() !== $comment->user_id)
+    {{-- Report somebody else's visible comment (FR-32). --}}
+    @if ($canReport)
         <button type="button" class="btn btn-sm btn-link text-muted px-1"
                 data-bs-toggle="modal" data-bs-target="#report-comment-{{ $comment->id }}"
                 title="{{ __('Report comment') }}" aria-label="{{ __('Report comment') }}">
@@ -61,6 +68,6 @@
     @endif
 </div>
 
-@if (auth()->id() !== $comment->user_id)
+@if ($canReport)
     @include('reports._modal', ['reportable' => $comment])
 @endif

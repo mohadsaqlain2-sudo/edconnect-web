@@ -1,5 +1,5 @@
 {{-- The Join Class page: Jitsi Meet embedded through the External API (FR-18, FR-20, FR-22).
-     The script URL and the domain come from config/jitsi.php, so a self hosted
+     The script URL and the domain come from config/services.php, so a self hosted
      Jitsi server only needs a change in .env (JITSI_DOMAIN).
      Everything the JavaScript needs travels in data-* attributes: no inline script. --}}
 <x-app-layout>
@@ -12,8 +12,10 @@
     </x-slot>
 
     <div class="container-fluid px-3 px-lg-4">
-        {{-- Slim top bar: identity on the left, room state and exit on the right. --}}
-        <div class="card edu-card mb-3">
+        {{-- Slim top bar: identity on the left, room state and exit on the right.
+             On phones and tablets the bar stays sticky, so the exit link is
+             always reachable (Phase 3D). --}}
+        <div class="card edu-card edu-room-bar mb-3">
             <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
                 <div class="d-flex align-items-center gap-2 min-w-0">
                     <span class="edu-auth-icon flex-shrink-0" aria-hidden="true">
@@ -81,8 +83,11 @@
              data-room="{{ $roomName }}"
              data-display-name="{{ $displayName }}"
              data-email="{{ $email }}"
+             data-avatar="{{ $avatarUrl }}"
+             data-subject="{{ $subject }}"
              data-moderator="{{ $isModerator ? '1' : '0' }}"
-             data-dashboard-url="{{ route('dashboard') }}">
+             data-dashboard-url="{{ route('dashboard') }}"
+             data-leave-url="{{ route('classes.leave', $classRoom) }}">
 
             {{-- Shown while the API and the room are loading --}}
             <div class="alert bg-body-secondary text-body border d-flex align-items-center gap-2" data-jitsi-status>
@@ -107,8 +112,19 @@
             <div class="jitsi-frame" data-jitsi-container></div>
         </div>
 
-        {{-- Collapsible room info: moderation controls and help, out of the way. --}}
-        <div class="collapse d-lg-block mt-3" id="room-info">
+        {{-- Collapsible room info: moderation controls and help, out of the way.
+             Below lg it is a bottom sheet, not a panel that pushes the video;
+             the close button and the sticky top bar keep "leave" reachable. --}}
+        <div class="collapse d-lg-block mt-3 edu-room-sheet" id="room-info">
+            <div class="edu-room-sheet-head d-lg-none">
+                <span class="edu-room-sheet-handle" aria-hidden="true"></span>
+                <span class="fw-semibold">{{ __('Room information') }}</span>
+                <button type="button" class="btn-close ms-auto"
+                        data-bs-toggle="collapse" data-bs-target="#room-info"
+                        aria-expanded="true" aria-controls="room-info"
+                        aria-label="{{ __('Close room information') }}"></button>
+            </div>
+
             <div class="row g-3">
                 {{-- Only the teacher can start or end the class (FR-24). --}}
                 @if ($isModerator && ($classRoom->teacher_id === auth()->id()))
@@ -119,7 +135,8 @@
 
                                 <div class="d-flex flex-wrap gap-2">
                                     @foreach ($classRoom->allowedTransitions() as $next)
-                                        <form method="POST" action="{{ route('classes.status', $classRoom) }}" class="d-inline">
+                                        <form method="POST" action="{{ route('classes.status', $classRoom) }}" class="d-inline"
+                                              data-confirm="{{ __('Change the class status to :status?', ['status' => __($next)]) }}">
                                             @csrf
                                             @method('PATCH')
                                             <input type="hidden" name="status" value="{{ $next }}">
@@ -163,8 +180,13 @@
                                     </li>
                                 @endif
                                 <li>
-                                    <i class="bi bi-mic-mute me-1" aria-hidden="true"></i>
-                                    {{ __('Your microphone starts muted; unmute when you are ready to speak.') }}
+                                    @if ($isModerator)
+                                        <i class="bi bi-mic me-1" aria-hidden="true"></i>
+                                        {{ __('Your microphone starts on; mute yourself whenever you do not need to speak.') }}
+                                    @else
+                                        <i class="bi bi-mic-mute me-1" aria-hidden="true"></i>
+                                        {{ __('Your microphone starts muted; unmute when you are ready to speak.') }}
+                                    @endif
                                 </li>
                             </ul>
                         </div>
