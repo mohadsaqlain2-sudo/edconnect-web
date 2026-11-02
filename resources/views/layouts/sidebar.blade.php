@@ -128,6 +128,15 @@
             <div class="edu-sidebar-divider"></div>
 
             <ul class="nav flex-column">
+                {{-- Phase 3F: installs the PWA. Hidden until the browser offers it
+                     (adaptive.js unhides it); standalone launches never see it. --}}
+                <li class="nav-item">
+                    <button type="button" class="nav-link edu-sidebar-footer-link w-100 text-start border-0 bg-transparent"
+                            data-install-app hidden title="{{ __('Install app') }}">
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        <span class="edu-sidebar-label">{{ __('Install app') }}</span>
+                    </button>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link edu-sidebar-footer-link {{ request()->routeIs('profile.*') ? 'active' : '' }}"
                        href="{{ route('profile.edit') }}" title="{{ __('Edit profile') }}"

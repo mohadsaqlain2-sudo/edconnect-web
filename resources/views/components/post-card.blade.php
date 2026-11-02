@@ -114,16 +114,42 @@
         <p class="post-body mb-2">{!! $hashtagService->linkify($post->body) !!}</p>
 
         @if ($post->image)
-            <img src="{{ $imageUrl }}"
+            {{-- Phase 3F: the media box reserves the intrinsic aspect ratio, so
+                 the card never jumps when the photo arrives (no CLS). A soft
+                 gradient holds the space until the photo decodes (blur-up).
+                 The <picture> element lets browsers choose WebP/AVIF if the
+                 storage helper produces those variants. --}}
+            <div class="edu-post-media"
                  @if ($imageDimensions)
-                     width="{{ $imageDimensions['width'] }}"
-                     height="{{ $imageDimensions['height'] }}"
-                     srcset="{{ $imageUrl }} {{ $imageDimensions['width'] }}w"
-                     sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 60vw, 720px"
-                 @endif
-                 alt="{{ __('Image attached to the post') }}"
-                 class="img-fluid rounded-3 mb-2 edu-post-image"
-                 loading="lazy" decoding="async">
+                     style="--edu-media-ratio: {{ $imageDimensions['width'] }} / {{ $imageDimensions['height'] }};"
+                 @endif>
+                <picture>
+                    {{-- If storage has generated a WebP variant the URL will
+                         contain .webp; otherwise we just supply the original.
+                         Browsers that support WebP pick the first matching source. --}}
+                    @if ($imageUrl && str_contains($imageUrl, '.webp'))
+                        <source srcset="{{ $imageUrl }}" type="image/webp"
+                            sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 60vw, 720px">
+                    @else
+                        {{-- Supply the same URL twice: once as the primary format,
+                             once as the fallback. Modern CDNs can negotiate. --}}
+                        <source srcset="{{ $imageUrl }}" type="image/jpeg"
+                            sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 60vw, 720px">
+                    @endif
+                    <img src="{{ $imageUrl }}"
+                         @if ($imageDimensions)
+                             width="{{ $imageDimensions['width'] }}"
+                             height="{{ $imageDimensions['height'] }}"
+                             srcset="{{ $imageUrl }} {{ $imageDimensions['width'] }}w"
+                             sizes="(max-width: 575.98px) 100vw, (max-width: 991.98px) 60vw, 720px"
+                         @endif
+                         alt="{{ __('Image attached to the post') }}"
+                         class="img-fluid rounded-3 mb-2 edu-post-image edu-blur-up"
+                         data-blur-up
+                         loading="lazy" decoding="async"
+                         fetchpriority="auto">
+                </picture>
+            </div>
         @endif
 
         {{-- Counters + actions --}}

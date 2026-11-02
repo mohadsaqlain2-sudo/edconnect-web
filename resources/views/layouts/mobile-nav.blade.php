@@ -38,6 +38,9 @@
         ],
         [
             'label' => __('Notifications'),
+            // The bottom bar is only ~64px wide per item on a 320px phone,
+            // so it shows the short label and keeps the full one for AT.
+            'short' => __('Alerts'),
             'icon' => 'bi-bell',
             'url' => route('notifications.index'),
             'active' => request()->routeIs('notifications.*'),
@@ -58,7 +61,8 @@
            class="edu-mobile-nav-item {{ $item['active'] ? 'active' : '' }}"
            @if ($item['active']) aria-current="page" @endif>
             <i class="bi {{ $item['icon'] }}" aria-hidden="true"></i>
-            <span>{{ $item['label'] }}</span>
+            <span class="edu-mobile-nav-label" aria-hidden="true">{{ $item['short'] ?? $item['label'] }}</span>
+            <span class="visually-hidden">{{ $item['label'] }}</span>
 
             @if (! empty($item['badge']))
                 <span class="badge rounded-pill text-bg-danger edu-mobile-nav-badge">

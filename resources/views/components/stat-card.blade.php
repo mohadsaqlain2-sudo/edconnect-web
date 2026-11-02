@@ -50,7 +50,15 @@
     $numericTrend = $hasTrend ? (float) $trend : 0;
     $direction = $trendDirection ?: ($numericTrend > 0 ? 'up' : ($numericTrend < 0 ? 'down' : 'flat'));
     $trendIcon = ['up' => 'bi-arrow-up-right', 'down' => 'bi-arrow-down-right', 'flat' => 'bi-dash'][$direction] ?? 'bi-dash';
-    $displayValue = is_numeric($value) ? number_format((float) $value) : $value;
+
+    // Phase 3F: locale-aware grouping ("1.234" in de, "1,234" in en), with a
+    // fallback for servers without ext-intl.
+    $displayValue = is_numeric($value)
+        ? \App\Support\LocaleNumber::format((float) $value)
+        : $value;
+    $displayTrend = $hasTrend
+        ? \App\Support\LocaleNumber::format(abs($numericTrend))
+        : null;
 @endphp
 
 <div {{ $attributes->class(['card', 'edu-card', 'edu-stat-card', 'h-100']) }} data-stat-card>
@@ -84,7 +92,7 @@
             @if ($hasTrend)
                 <span class="edu-trend is-{{ $direction }}">
                     <i class="bi {{ $trendIcon }}" aria-hidden="true"></i>
-                    {{ number_format(abs($numericTrend), 0) }}%
+                    {{ $displayTrend }}%
                 </span>
             @endif
         </div>

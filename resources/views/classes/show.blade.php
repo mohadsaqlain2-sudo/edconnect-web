@@ -17,7 +17,7 @@
     @endphp
 
     <div class="container-xxl px-3 px-lg-4">
-        <div class="row g-4">
+        <div class="row g-4 edu-split-view">
             {{-- ------------------------------------------------------------------
                  Main column: the class itself
                  ------------------------------------------------------------------ --}}

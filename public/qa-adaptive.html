@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EduConnect adaptive QA harness</title>
+    <style>
+        html, body { margin: 0; background: #222; }
+        #frame { display: block; border: 0; background: #fff; }
+    </style>
+</head>
+<body>
+<iframe id="frame" title="QA viewport"></iframe>
+<script>
+    const frame = document.getElementById('frame');
+
+    window.qaLoad = function (url, width, height) {
+        return new Promise(function (resolve, reject) {
+            const timer = setTimeout(function () { reject(new Error('iframe load timeout')); }, 20000);
+
+            frame.onload = function () {
+                clearTimeout(timer);
+                setTimeout(function () { resolve(true); }, 450);
+            };
+
+            frame.style.width = width + 'px';
+            frame.style.height = height + 'px';
+            frame.src = url;
+        });
+    };
+
+    window.qaScan = async function (paths, sizes, options) {
+        options = options || {};
+        const results = [];
+
+        for (const size of sizes) {
+            const [width, height] = size;
+
+            for (const path of paths) {
+                await window.qaLoad(path, width, height);
+
+                options.input = width <= 991 ? 'touch' : 'mouse';
+                options.device = width <= 575 ? 'mobile' : (width <= 1199 ? 'tablet' : 'desktop');
+                options.dir = options.dir || null;
+
+                const report = window.qaReport(options);
+                const issues = [];
+
+                if (report.scroll.horizontal) {
+                    issues.push('hscroll ' + report.scroll.htmlScroll + '>' + report.scroll.htmlClient);
+                }
+
+                if (report.overflow.length) {
+                    issues.push('overflow ' + report.overflow.map(o => o.el + '[' + o.left + ',' + o.right + ']').join(' '));
+                }
+
+                const realClipped = report.clipped.filter(c => !/visually-hidden|skip-link/.test(c.el));
+                if (realClipped.length) {
+                    issues.push('clipped ' + realClipped.map(c => c.el + '(' + c.scrollWidth + '>' + c.clientWidth + ')').join(' '));
+                }
+
+                const importantSmall = report.smallTargets.filter(t => /btn-close|navbar-brand|edu-list-title|edu-mobile-nav|btn-primary|btn-outline/.test(t.el));
+                if (importantSmall.length) {
+                    issues.push('small ' + importantSmall.map(t => t.el + '(' + t.w + 'x' + t.h + ')').join(' '));
+                }
+
+                if (report.charts.some(c => Math.abs(c.w - c.attrW) > 2)) {
+                    issues.push('chart ' + JSON.stringify(report.charts));
+                }
+
+                if (report.images.some(i => i.ratio && i.ratio > 1.25)) {
+                    issues.push('blurry ' + report.images.filter(i => i.ratio > 1.25).map(i => i.el + ' ' + i.natural + '->' + i.rendered).join(' '));
+                }
+
+                if (report.chrome.mobileNavVisible) {
+                    const nav = report.fixed.find(f => /edu-mobile-nav/.test(f.el));
+                    const bodyPad = parseFloat(frame.contentWindow.getComputedStyle(frame.contentDocument.body).paddingBottom);
+                    if (nav && bodyPad + 2 < (nav.bottom - nav.top)) {
+                        issues.push('bottom-pad ' + bodyPad + ' < nav ' + (nav.bottom - nav.top));
+                    }
+                }
+
+                if (issues.length) {
+                    results.push({ size: width + 'x' + height, path, issues });
+                }
+            }
+        }
+
+        return results;
+    };
+
+    window.qaReport = function (options) {
+        options = options || {};
+
+        const win = frame.contentWindow;
+        const doc = frame.contentDocument;
+        const root = doc.documentElement;
+        const body = doc.body;
+        const vw = win.innerWidth;
+        const vh = win.innerHeight;
+
+        if (options.dir) {
+            root.setAttribute('dir', options.dir);
+        }
+
+        if (options.theme) {
+            root.setAttribute('data-bs-theme', options.theme);
+            root.dataset.theme = options.theme;
+        }
+
+        if (options.device) {
+            root.dataset.device = options.device;
+        }
+
+        if (options.input) {
+            root.dataset.input = options.input;
+        }
+
+        if (options.network) {
+            root.dataset.network = options.network;
+            body.classList.toggle('edu-is-slow', options.network === 'slow');
+        }
+
+        if (options.largeText) {
+            root.classList.add('edu-large-text');
+        }
+
+        const describe = function (el) {
+            const id = el.id ? '#' + el.id : '';
+            const cls = typeof el.className === 'string' && el.className
+                ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.')
+                : '';
+            return el.tagName.toLowerCase() + id + cls;
+        };
+
+        const visible = function (el) {
+            const cs = win.getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) {
+                return false;
+            }
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.height > 0;
+        };
+
+        const all = Array.from(body.querySelectorAll('*'));
+
+        // Elements that stick out of the viewport horizontally. Fixed and
+        // absolutely positioned decorations (skip links, FABs, offcanvas) are
+        // reported separately, because they are allowed to sit at an edge.
+        const overflowing = all.filter(function (el) {
+            if (!visible(el)) return false;
+            const cs = win.getComputedStyle(el);
+            if (cs.position === 'fixed' || cs.position === 'absolute') return false;
+            const r = el.getBoundingClientRect();
+            return r.right > vw + 1.5 || r.left < -1.5;
+        }).slice(0, 12).map(function (el) {
+            const r = el.getBoundingClientRect();
+            return { el: describe(el), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
+        });
+
+        // Text that is clipped inside its own box without a scroll escape.
+        const clipped = all.filter(function (el) {
+            if (!visible(el)) return false;
+            const cs = win.getComputedStyle(el);
+            if (cs.overflowX === 'visible' || cs.overflowX === 'auto' || cs.overflowX === 'scroll') return false;
+            return el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0;
+        }).slice(0, 12).map(function (el) {
+            return { el: describe(el), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth };
+        });
+
+        // Interactive targets that are too small for a thumb. Only meaningful
+        // when the page is told it is a touch device.
+        const touch = options.input === 'touch' || root.dataset.input === 'touch';
+        const smallTargets = touch ? all.filter(function (el) {
+            if (!/^(A|BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(el.tagName)) return false;
+            if (!visible(el)) return false;
+            if (el.closest('.visually-hidden, .visually-hidden-focusable, .skip')) return false;
+            const r = el.getBoundingClientRect();
+            return r.width < 44 || r.height < 40;
+        }).slice(0, 15).map(function (el) {
+            const r = el.getBoundingClientRect();
+            return { el: describe(el), w: Math.round(r.width), h: Math.round(r.height) };
+        }) : [];
+
+        const fixed = all.filter(function (el) {
+            if (!visible(el)) return false;
+            return win.getComputedStyle(el).position === 'fixed';
+        }).slice(0, 20).map(function (el) {
+            const r = el.getBoundingClientRect();
+            return {
+                el: describe(el),
+                top: Math.round(r.top), bottom: Math.round(r.bottom),
+                left: Math.round(r.left), right: Math.round(r.right),
+                z: win.getComputedStyle(el).zIndex,
+            };
+        });
+
+        // Does the last piece of content disappear behind the fixed bottom bar?
+        const main = doc.querySelector('main') || body;
+        const mainRect = main.getBoundingClientRect();
+        const bottomBars = fixed.filter(function (f) {
+            return f.bottom >= vh - 2 && f.top > vh / 2;
+        });
+
+        const images = Array.from(doc.querySelectorAll('img')).map(function (img) {
+            const r = img.getBoundingClientRect();
+            return {
+                el: describe(img),
+                natural: img.naturalWidth,
+                rendered: Math.round(r.width),
+                ratio: img.naturalWidth ? Math.round((r.width / img.naturalWidth) * 100) / 100 : null,
+                complete: img.complete,
+                loading: img.getAttribute('loading'),
+                srcset: Boolean(img.getAttribute('srcset')),
+            };
+        }).filter(function (i) { return i.rendered > 0; }).slice(0, 15);
+
+        const charts = Array.from(doc.querySelectorAll('canvas[data-chart]')).map(function (c) {
+            const r = c.getBoundingClientRect();
+            return { id: c.id, w: Math.round(r.width), h: Math.round(r.height), attrW: c.width, attrH: c.height };
+        });
+
+        const nav = doc.querySelector('.edu-navbar');
+        const sidebar = doc.querySelector('.edu-sidebar, #eduSidebar, .offcanvas-lg');
+        const mobileNav = doc.querySelector('.edu-mobile-nav');
+
+        return {
+            size: { vw: vw, vh: vh },
+            scroll: {
+                htmlScroll: root.scrollWidth,
+                htmlClient: root.clientWidth,
+                bodyScroll: body.scrollWidth,
+                horizontal: root.scrollWidth > root.clientWidth + 1,
+            },
+            flags: {
+                device: root.dataset.device,
+                input: root.dataset.input,
+                orientation: root.dataset.orientation,
+                breakpoint: root.dataset.breakpoint,
+                network: root.dataset.network,
+                theme: root.getAttribute('data-bs-theme'),
+                dir: root.getAttribute('dir'),
+                largeText: root.classList.contains('edu-large-text'),
+            },
+            overflow: overflowing,
+            clipped: clipped,
+            smallTargets: smallTargets,
+            fixed: fixed,
+            bottomBars: bottomBars,
+            mainBottom: Math.round(mainRect.bottom),
+            images: images,
+            charts: charts,
+            chrome: {
+                nav: nav ? Math.round(nav.getBoundingClientRect().height) : null,
+                sidebarVisible: sidebar ? visible(sidebar) : null,
+                sidebarLeft: sidebar && visible(sidebar) ? Math.round(sidebar.getBoundingClientRect().left) : null,
+                mobileNavVisible: mobileNav ? visible(mobileNav) : null,
+                bottomNavTop: mobileNav && visible(mobileNav) ? Math.round(mobileNav.getBoundingClientRect().top) : null,
+            },
+            dialogs: Array.from(doc.querySelectorAll('dialog[open]')).map(function (d) { return d.id; }),
+        };
+    };
+</script>
+</body>
+</html>

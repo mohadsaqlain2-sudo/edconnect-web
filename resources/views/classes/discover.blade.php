@@ -110,7 +110,7 @@
             </span>
         </div>
 
-        <div class="row g-3">
+        <div class="row g-3 edu-auto-grid">
             @forelse ($classes as $class)
                 @php($isEnrolled = $enrolledIds->contains($class->id))
 

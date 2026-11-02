@@ -1,0 +1,78 @@
+{
+    "name": "EduConnect",
+    "short_name": "EduConnect",
+    "description": "Live video classes, a friendly social feed and simple class management for teachers and students.",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+    "orientation": "any",
+    "background_color": "#f6f7fb",
+    "theme_color": "#4f46e5",
+    "lang": "en",
+    "dir": "auto",
+    "categories": ["education", "social", "productivity"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Feed",
+            "short_name": "Feed",
+            "description": "Posts from you and the people you follow.",
+            "url": "/feed",
+            "icons": [
+                { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+            ]
+        },
+        {
+            "name": "Classes",
+            "short_name": "Classes",
+            "description": "Your classes and classes you can join.",
+            "url": "/classes",
+            "icons": [
+                { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+            ]
+        },
+        {
+            "name": "Notifications",
+            "short_name": "Alerts",
+            "description": "Likes, comments, follows and class updates.",
+            "url": "/notifications",
+            "icons": [
+                { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }
+            ]
+        }
+    ]
+}

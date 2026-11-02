@@ -151,7 +151,7 @@
 
         <div class="d-flex align-items-center gap-2">
             @if ($total !== null)
-                <span class="edu-chip edu-chart-total" data-chart-total>{{ number_format((float) $total) }}</span>
+                <span class="edu-chip edu-chart-total" data-chart-total>{{ \App\Support\LocaleNumber::format((float) $total) }}</span>
             @endif
 
             @if ($endpoint)

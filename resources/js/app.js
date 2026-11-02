@@ -5,6 +5,11 @@ import * as bootstrap from 'bootstrap';
 
 import Alpine from 'alpinejs';
 
+// Phase 3F: device / input / orientation / network detection, container-aware
+// behaviours, gestures, keyboard shortcuts, PWA install and service worker.
+// Loaded before the other feature modules so they can read window.EduAdaptive.
+import './adaptive';
+
 // Layout helpers: remember the desktop sidebar state (FR-31).
 import './layout';
 

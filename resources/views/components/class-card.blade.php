@@ -8,7 +8,7 @@
     $studentsCount = $classRoom->students_count ?? $classRoom->students()->count();
 @endphp
 
-<div class="card edu-card border-0 h-100">
+<div class="card edu-card edu-class-card border-0 h-100">
     <div class="card-body d-flex flex-column">
         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
             <h3 class="h6 fw-bold mb-0">
@@ -36,7 +36,10 @@
         <ul class="list-unstyled small text-muted mb-2">
             <li class="mb-1">
                 <i class="bi bi-calendar-event me-1"></i>
-                {{ $classRoom->date?->format('D d M Y') }}
+                {{-- Phase 3F: month and day names follow the application locale. --}}
+                <time datetime="{{ $classRoom->date?->toDateString() }}">
+                    {{ $classRoom->date?->translatedFormat('D d M Y') }}
+                </time>
             </li>
             <li class="mb-1">
                 <i class="bi bi-clock me-1"></i>

@@ -82,6 +82,27 @@ async function startRoom(wrapper) {
     const status = wrapper.querySelector('[data-jitsi-status]');
     const errorBox = wrapper.querySelector('[data-jitsi-error]');
 
+    // Phase 3F: the room adapts to the device, not only to the screen CSS.
+    // A phone in portrait gets the short toolbar; a metered connection starts
+    // with the camera off and a 360p ceiling so audio stays usable.
+    const adaptive = window.EduAdaptive?.snapshot;
+    const compact = adaptive
+        ? ['xs', 'sm', 'md'].includes(adaptive.breakpoint)
+        : window.innerWidth < 992;
+    const slow = window.EduAdaptive?.isSlow?.() ?? false;
+
+    const toolbarButtons = compact
+        ? ['microphone', 'camera', 'chat', 'raisehand', 'hangup']
+        : [
+            'microphone',
+            'camera',
+            'chat',
+            'raisehand',
+            'tileview',
+            'fullscreen',
+            'hangup',
+        ];
+
     const showError = () => {
         status?.classList.add('d-none');
         errorBox?.classList.remove('d-none');
@@ -127,7 +148,7 @@ async function startRoom(wrapper) {
         configOverwrite: {
             // Teacher-friendly defaults: the moderator starts unmuted with the
             // camera on. Students start muted so they can look around first.
-            startWithVideoMuted: wrapper.dataset.moderator !== '1',
+            startWithVideoMuted: wrapper.dataset.moderator !== '1' || slow,
             startWithAudioMuted: wrapper.dataset.moderator !== '1',
             // Show the preview screen so a student can check the microphone first.
             prejoinPageEnabled: true,
@@ -135,22 +156,25 @@ async function startRoom(wrapper) {
             disableDeepLinking: true,
             // The class title is the meeting subject shown in the room.
             subject: wrapper.dataset.subject,
+            // On a slow / Save-Data connection never ask for more than 360p.
+            ...(slow ? {
+                resolution: 360,
+                constraints: {
+                    video: {
+                        height: { ideal: 360, max: 360 },
+                    },
+                },
+            } : {}),
             // Exactly the buttons the brief asks for: microphone, camera,
-            // chat, raise hand, tile view, fullscreen and hang up.
-            toolbarButtons: [
-                'microphone',
-                'camera',
-                'chat',
-                'raisehand',
-                'tileview',
-                'fullscreen',
-                'hangup',
-            ],
+            // chat, raise hand, tile view, fullscreen and hang up. On phones
+            // and tablets the short toolbar keeps every button reachable.
+            toolbarButtons,
         },
         interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             MOBILE_APP_PROMO: false,
             DEFAULT_BACKGROUND: '#f6f7fb',
+            TOOLBAR_ALWAYS_VISIBLE: !compact,
         },
     };
 
@@ -161,6 +185,44 @@ async function startRoom(wrapper) {
         showError();
         return;
     }
+
+    // Phase 3F: rotation, split-screen and browser zoom all change the space
+    // around the room. Clear the cached height, let the dvh CSS settle and ask
+    // Jitsi (when the method exists) to re-measure its iframe.
+    const resizeRoom = () => {
+        const frameEl = wrapper.querySelector('.jitsi-frame');
+
+        if (frameEl) {
+            frameEl.style.removeProperty('height');
+            void frameEl.offsetHeight;
+        }
+
+        const iframe = container?.querySelector('iframe');
+        if (iframe) {
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+        }
+
+        if (typeof api?.resize === 'function') {
+            try {
+                api.resize('100%', '100%');
+            } catch (error) {
+                // Older deployments may not expose resize; the iframe still
+                // follows its 100% container.
+            }
+        }
+    };
+
+    wrapper.addEventListener('edu:room-resize', resizeRoom);
+    window.addEventListener('orientationchange', () => window.setTimeout(resizeRoom, 260));
+    document.addEventListener('edu:viewport-changed', resizeRoom);
+    document.addEventListener('edu:network-changed', () => {
+        if (window.EduAdaptive?.isSlow?.()) {
+            // Do not touch the user's camera, but make the reduced quality
+            // visible in the console for support calls.
+            console.info('[EduConnect] slow connection: Jitsi is capped at 360p.');
+        }
+    });
 
     // The spinner can go as soon as the user is inside the room.
     api.addEventListener('videoConferenceJoined', () => {

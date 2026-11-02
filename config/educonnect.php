@@ -37,6 +37,11 @@ return [
         'profile_photo_quality' => 85,
     ],
 
+    // Locales whose script runs right to left. Both layouts set dir="rtl" and
+    // the adaptive stylesheet mirrors the few physical properties Bootstrap
+    // still uses (Phase 3F).
+    'rtl_locales' => ['ar', 'fa', 'he', 'ur', 'ps', 'sd', 'ug', 'yi', 'ckb'],
+
     // Default meta description for pages that do not provide their own.
     'meta' => [
         'description' => env(

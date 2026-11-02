@@ -154,7 +154,7 @@
                                         </a>
                                     </x-empty-state>
                                 @else
-                                    <div class="row g-3">
+                                    <div class="row g-3 edu-auto-grid">
                                         @foreach ($classes as $classRoom)
                                             <div class="col-12 col-md-6">
                                                 <x-class-card :class-room="$classRoom" :url="route('classes.show', $classRoom)" />

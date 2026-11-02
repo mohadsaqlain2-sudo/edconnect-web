@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="EduConnect">
+    <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4f46e5"/>
+            <stop offset="1" stop-color="#7c3aed"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="0.22" cy="0.18" r="0.62">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>
+    </defs>
+
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <rect width="512" height="512" fill="url(#glow)"/>
+
+    <polygon points="180,250 332,250 332,330 256,356 180,330" fill="#ffffff" fill-opacity="0.8"/>
+    <polygon points="256,142 432,226 256,310 80,226" fill="#ffffff"/>
+    <polyline points="80,226 256,310" fill="none" stroke="#4f46e5" stroke-opacity="0.38" stroke-width="7"/>
+    <line x1="432" y1="226" x2="432" y2="318" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="432" cy="330" r="13" fill="#ffffff"/>
+</svg>

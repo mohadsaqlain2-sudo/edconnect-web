@@ -149,7 +149,7 @@
                             {{ trans_choice(':count person found|:count people found', $users->total(), ['count' => $users->total()]) }}
                         </p>
 
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 edu-auto-grid">
                             @foreach ($users as $user)
                                 <div class="col">
                                     {{-- The shared user card, with a link to the public profile

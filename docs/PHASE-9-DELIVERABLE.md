@@ -271,7 +271,7 @@ infrastructure tables + `migrations`).
 
 ```text
 php artisan test
-  Tests:  317 passed (1709 assertions)   Duration: ~32-43 s
+  Tests:  317 passed (1709 assertions)   Duration: 43-115 s (hardware dependent)
 
 php artisan test --filter=PhaseNineTest
   Tests:  10 passed (44 assertions)
@@ -463,7 +463,7 @@ Sequencing rules:
 | `tests/Feature/PhaseNineTest.php` | **New** 10-test regression suite for every finding |
 | `tests/Feature/SmokeTest.php` | Deterministic post choice in the report-to-moderation flow |
 | `docs/PHASE-9-DELIVERABLE.md` | **New** this document |
-| `docs/TEST-MATRIX.md`, `docs/REQUIREMENTS-STATUS.md`, `README.md` | Counts, Phase 9 rows and links refreshed |
+| `docs/TEST-MATRIX.md`, `docs/REQUIREMENTS-STATUS.md`, `docs/SECURITY.md`, `README.md` | Counts, Phase 9 rows, verification note and links refreshed |
 
 The complete content of every changed code file is in Appendix A, below.
 

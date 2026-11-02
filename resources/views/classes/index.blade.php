@@ -72,7 +72,7 @@
                 </span>
             </div>
 
-            <div class="row g-3">
+            <div class="row g-3 edu-auto-grid">
                 @foreach ($classes as $class)
                     <div class="col-12 col-md-6 col-xl-4">
                         <x-class-card :class-room="$class" :url="route('classes.show', $class)">

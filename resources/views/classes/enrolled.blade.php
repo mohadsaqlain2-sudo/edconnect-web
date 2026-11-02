@@ -21,7 +21,7 @@
     </x-slot>
 
     <div class="container-xxl px-3 px-lg-4">
-        <div class="row g-3">
+        <div class="row g-3 edu-auto-grid">
             @forelse ($classes as $class)
                 <div class="col-12 col-md-6 col-xl-4">
                     <x-class-card :class-room="$class" :url="route('classes.show', $class)">

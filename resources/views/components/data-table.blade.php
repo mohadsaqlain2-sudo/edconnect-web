@@ -51,8 +51,13 @@
         </div>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive" role="region"
+         aria-label="{{ $title ? $title.' — '.__('table') : __('Data table') }}"
+         tabindex="0">
         <table class="table table-hover align-middle mb-0">
+            <caption class="visually-hidden">
+                {{ $title ?: __('Data table') }}
+            </caption>
             <thead>
                 {{ $head }}
             </thead>

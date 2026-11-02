@@ -2778,3 +2778,9 @@ button:focus-visible,
 // Phase 3D — responsive layer (imported last on purpose)
 // -----------------------------------------------------------------------------
 @import 'responsive';
+
+// -----------------------------------------------------------------------------
+// Phase 3F — adaptive layer: container queries, device attributes, PWA chrome,
+// RTL, forced colours, TV and slow-network behaviour. Must stay last.
+// -----------------------------------------------------------------------------
+@import 'adaptive';

@@ -54,22 +54,46 @@ async function refreshNotifications() {
     }
 }
 
+/**
+ * Polling interval. Phase 3F slows this down on Save-Data / 2G-3G connections
+ * instead of spending the visitor's data on a bell that is not urgent.
+ */
+function pollDelay() {
+    return window.EduAdaptive?.pollInterval?.(POLL_INTERVAL_MS) ?? POLL_INTERVAL_MS;
+}
+
 function startNotificationPolling() {
     // Nothing to do for guests or on pages without the bell.
     if (!document.querySelector('[data-notification-list]')) {
         return;
     }
 
-    setInterval(() => {
-        // No point in polling a tab nobody is looking at.
-        if (!document.hidden) {
+    let timer = null;
+
+    const schedule = () => {
+        window.clearInterval(timer);
+        timer = window.setInterval(() => {
+            // No point in polling a tab nobody is looking at.
+            if (!document.hidden && navigator.onLine) {
+                refreshNotifications();
+            }
+        }, pollDelay());
+    };
+
+    schedule();
+
+    // Re-plan the timer when the connection type changes (Slow 4G -> offline).
+    document.addEventListener('edu:network-changed', () => {
+        schedule();
+
+        if (navigator.onLine) {
             refreshNotifications();
         }
-    }, POLL_INTERVAL_MS);
+    });
 
     // Coming back to the tab: refresh straight away.
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
+        if (!document.hidden && navigator.onLine) {
             refreshNotifications();
         }
     });

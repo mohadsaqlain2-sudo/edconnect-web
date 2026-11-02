@@ -160,6 +160,27 @@
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
+                        {{-- Phase 3F: display and app controls, also reachable with ? --}}
+                        <li>
+                            <button type="button" class="dropdown-item" data-large-text-toggle
+                                    data-label-on="{{ __('Larger text') }}"
+                                    data-label-off="{{ __('Normal text') }}"
+                                    aria-pressed="false">
+                                <i class="bi bi-fonts me-1" aria-hidden="true"></i>
+                                <span data-large-text-label>{{ __('Larger text') }}</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item" data-shortcuts-open>
+                                <i class="bi bi-keyboard me-1" aria-hidden="true"></i> {{ __('Keyboard shortcuts') }}
+                            </button>
+                        </li>
+                        <li>
+                            <button type="button" class="dropdown-item" data-install-app hidden>
+                                <i class="bi bi-download me-1" aria-hidden="true"></i> {{ __('Install app') }}
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf

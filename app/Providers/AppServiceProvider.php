@@ -7,6 +7,7 @@ use App\Policies\ClassPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -34,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
         // naming convention (ClassRoom -> ClassRoomPolicy) cannot find it.
         // The mapping is declared explicitly instead (FR-18, FR-20, FR-24).
         Gate::policy(ClassRoom::class, ClassPolicy::class);
+
+        // Phase 3F: Carbon renders month and day names in the active locale, so
+        // `translatedFormat()` on every card is locale-aware without extra code.
+        Carbon::setLocale(app()->getLocale());
 
         $this->configureRateLimiting();
     }

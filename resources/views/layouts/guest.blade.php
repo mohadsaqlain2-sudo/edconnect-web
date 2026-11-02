@@ -1,5 +1,10 @@
+@php
+    // Phase 3F: mirror the whole auth layout for right-to-left languages.
+    $eduLocale = app()->getLocale();
+    $eduDir = in_array($eduLocale, config('educonnect.rtl_locales', []), true) ? 'rtl' : 'ltr';
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', $eduLocale) }}" dir="{{ $eduDir }}">
     <head>
         <meta charset="utf-8">
         {{-- viewport-fit=cover lets the layout own the notch/home-indicator
@@ -9,6 +14,17 @@
         <meta name="color-scheme" content="light dark">
 
         <title>{{ $attributes->get('title') ? $attributes->get('title').' · ' : '' }}{{ config('app.name', 'EduConnect') }}</title>
+
+        {{-- Installable app metadata (Phase 3F). --}}
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+        <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'EduConnect') }}">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
 
         {{-- Apply the saved theme before the first paint (same key as the app layout). --}}
         <script>
@@ -25,6 +41,9 @@
             })();
         </script>
 
+        {{-- Phase 3F: device / input / orientation / network flags before paint. --}}
+        @include('layouts.adaptive-head')
+
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,6 +52,29 @@
         @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     </head>
     <body class="edu-auth-body">
+        @include('layouts.network-banner')
+
+        {{-- Small preference toolbar: theme, larger text and install. Kept out of
+             the form so a keyboard user reaches it before the fields. --}}
+        <div class="edu-auth-tools" role="group" aria-label="{{ __('Display settings') }}">
+            <button class="btn edu-icon-btn" type="button" data-theme-toggle
+                    aria-label="{{ __('Switch to dark mode') }}" title="{{ __('Switch to dark mode') }}"
+                    aria-pressed="false">
+                <i class="bi bi-moon-stars" data-theme-icon aria-hidden="true"></i>
+            </button>
+
+            <button class="btn edu-icon-btn" type="button" data-large-text-toggle
+                    data-label-on="{{ __('Larger text') }}" data-label-off="{{ __('Normal text') }}"
+                    aria-label="{{ __('Larger text') }}" title="{{ __('Larger text') }}"
+                    aria-pressed="false">
+                <i class="bi bi-fonts" aria-hidden="true"></i>
+            </button>
+
+            <button class="btn edu-icon-btn" type="button" data-install-app hidden
+                    aria-label="{{ __('Install app') }}" title="{{ __('Install app') }}">
+                <i class="bi bi-download" aria-hidden="true"></i>
+            </button>
+        </div>
         <main class="min-vh-100">
             <div class="row g-0 min-vh-100">
                 {{-- Branded panel: desktop and tablet only. --}}
@@ -111,5 +153,7 @@
                 </section>
             </div>
         </main>
+
+        @include('layouts.shortcuts')
     </body>
 </html>

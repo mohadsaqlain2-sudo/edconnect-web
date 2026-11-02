@@ -284,8 +284,11 @@ password-reset pages.
 
 The Breeze e-mail verification routes (`verification.notice`, `verification.verify`)
 are present but not enforced on the product routes: the SRS treats e-mail
-verification as a confirmation step, not a gate. The password-reset flow is
-fully wired (section 8 / deployment guide).
+verification as a confirmation step, not a gate. Since Phase 9 `User`
+implements `MustVerifyEmail`, so registration really queues the signed link and
+the profile page shows the unverified banner; the account stays usable until
+the address is confirmed. The password-reset flow is fully wired
+(section 8 / deployment guide).
 
 ---
 

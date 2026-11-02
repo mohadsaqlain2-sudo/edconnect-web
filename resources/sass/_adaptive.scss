@@ -1,0 +1,1621 @@
+// -----------------------------------------------------------------------------
+// Phase 3F — adaptive layer (imported after `responsive` on purpose)
+// -----------------------------------------------------------------------------
+// This file extends the Phase 3D layout. It adds:
+//   • container queries so cards adapt to their own column, not the screen
+//   • fluid spacing / type / media with clamp(), grid auto-fit and aspect-ratio
+//   • reactions to the data-* attributes written by resources/js/adaptive.js
+//   • TV / D-pad, slow network, forced colours, high contrast and RTL support
+//   • the UI for the PWA banner, install prompt and offline update prompt
+// It never removes a component; every rule is an additive refinement.
+// -----------------------------------------------------------------------------
+
+:root {
+    // Capability tokens, separate from the Phase 3B design tokens.
+    --edu-tap-target: 44px;
+    --edu-gutter-fluid: clamp(0.75rem, 0.55rem + 1.1vw, 1.5rem);
+    --edu-card-pad-fluid: clamp(0.875rem, 0.62rem + 0.9vw, 1.5rem);
+    --edu-avatar-sm-fluid: clamp(1.75rem, 1.55rem + 0.55vw, 2rem);
+    --edu-avatar-md-fluid: clamp(2.25rem, 2rem + 0.8vw, 2.5rem);
+    --edu-h1-fluid: clamp(1.5rem, 1.15rem + 1.5vw, 2.35rem);
+    --edu-h2-fluid: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
+    --edu-h3-fluid: clamp(1.1rem, 1rem + 0.55vw, 1.35rem);
+    --edu-fs-body-fluid: clamp(0.9375rem, 0.9rem + 0.16vw, 1rem);
+    --edu-content-max: 1600px;
+    --edu-reading-measure: 68ch;
+    --edu-focus-width: 3px;
+    --edu-focus-color: color-mix(in srgb, var(--edu-primary) 78%, #000 22%);
+    --edu-pull-size: 3.25rem;
+}
+
+// -----------------------------------------------------------------------------
+// 1. Fluid foundations
+// -----------------------------------------------------------------------------
+
+html {
+    // iOS / Android text autosizing must not fight the responsive layout.
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    // A browser at 200% zoom behaves like a narrower viewport; keep the
+    // sticky offsets in sync with the smaller navbar.
+    scroll-padding-top: calc(var(--edu-navbar-height) + var(--edu-space-3));
+}
+
+body {
+    font-size: var(--edu-fs-body-fluid);
+    line-height: 1.6;
+    text-wrap: pretty;
+    // Long unbroken strings (emails, URLs, hashtags) can never widen the page.
+    overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4,
+.edu-page-header h1,
+.edu-greeting h1 {
+    text-wrap: balance;
+}
+
+.edu-page-header h1,
+.edu-greeting h1 {
+    font-size: var(--edu-h1-fluid);
+}
+
+.edu-page-header h2,
+.edu-section-title {
+    font-size: var(--edu-h2-fluid);
+}
+
+// Comfortable reading width for prose, at every size.
+.edu-measure,
+.post-body,
+.edu-post-body,
+.edu-comment-body {
+    max-width: var(--edu-reading-measure);
+}
+
+// Very long words in user-generated content wrap instead of scrolling.
+.post-body,
+.edu-post-body,
+.comment-body,
+.edu-comment-body,
+.notification-body,
+.edu-notification-body,
+.edu-list-title,
+.edu-hashtag,
+.edu-mention,
+.dropdown-item,
+.list-group-item,
+td,
+th {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+// Media is never distorted and never forces a horizontal scrollbar.
+img,
+video,
+svg,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+// Blur-up post media: the gradient holds the space until the photo decodes.
+.edu-post-media {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+    border-radius: var(--edu-radius);
+    background:
+        radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--edu-primary) 12%, transparent), transparent 60%),
+        linear-gradient(110deg, var(--edu-surface-soft), var(--edu-border));
+    aspect-ratio: var(--edu-media-ratio, auto);
+}
+
+.edu-post-media .edu-post-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0 !important;
+    transition: filter 380ms ease, transform 380ms ease;
+}
+
+.edu-post-media:not(.is-loaded) .edu-blur-up {
+    filter: blur(16px);
+    transform: scale(1.04);
+}
+
+html[data-reduced-motion='true'] .edu-post-media .edu-post-image {
+    transition: none;
+}
+
+img {
+    height: auto;
+}
+
+img[width][height] {
+    height: auto;
+}
+
+// A card grid that uses the available column width, not only the viewport.
+// Applied to class/search card grids next to Bootstrap's own row classes.
+.edu-auto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--edu-space-4);
+    align-items: stretch;
+    margin-inline: 0;
+}
+
+.edu-auto-grid > [class*='col'],
+.edu-auto-grid > [class*='col-'] {
+    width: auto;
+    max-width: none;
+    flex: none;
+    padding: 0;
+}
+
+// Narrow-but-tall split view: list + detail side by side on tablets.
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .edu-split-view {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+        gap: var(--edu-space-4);
+    }
+
+    .edu-split-view > [class*='col'],
+    .edu-split-view > [class*='col-'] {
+        width: auto;
+        max-width: none;
+        flex: none;
+        padding: 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 2. Container queries
+// -----------------------------------------------------------------------------
+// Breakpoints are for the page; container queries are for the component. A
+// post card inside a 320px main column behaves like a phone card even on a
+// 2560px monitor with a wide sidebar open.
+
+[data-post-card] {
+    container: post-card / inline-size;
+}
+
+.edu-stat-card {
+    container: stat-card / inline-size;
+}
+
+.edu-class-card {
+    container: class-card / inline-size;
+}
+
+.edu-chart-card {
+    container: chart-card / inline-size;
+}
+
+.edu-data-table {
+    container: data-table / inline-size;
+}
+
+@container post-card (max-width: 26rem) {
+    .post-body {
+        font-size: 0.95rem;
+    }
+
+    header .avatar,
+    header .avatar-sm {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    footer {
+        flex-wrap: wrap;
+        row-gap: 0.4rem;
+    }
+
+    .edu-post-image {
+        max-height: 340px;
+    }
+
+    .edu-post-comments .avatar,
+    .edu-post-comments .avatar-sm {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+@container post-card (min-width: 48rem) {
+    .edu-post-image {
+        max-height: 560px;
+    }
+}
+
+@container class-card (max-width: 17rem) {
+    .card-body {
+        padding: var(--edu-card-pad-fluid);
+    }
+
+    .edu-class-card .h6 {
+        font-size: 1rem;
+    }
+
+    .edu-class-card .d-flex.flex-wrap.gap-2 > .btn,
+    .edu-class-card .d-flex.flex-wrap.gap-2 > form {
+        flex: 1 1 100%;
+    }
+
+    .edu-class-card .d-flex.flex-wrap.gap-2 > form > .btn {
+        width: 100%;
+    }
+}
+
+@container class-card (min-width: 28rem) {
+    .card-body {
+        padding: var(--edu-space-5);
+    }
+}
+
+@container stat-card (max-width: 11rem) {
+    .edu-sparkline {
+        display: none;
+    }
+
+    .edu-stat-value {
+        font-size: 1.35rem;
+    }
+
+    .edu-stat-icon {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+        border-radius: 12px;
+        font-size: 1rem;
+    }
+
+    .edu-stat-card .card-body {
+        min-height: 112px;
+    }
+}
+
+@container chart-card (max-width: 22rem) {
+    .card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .edu-chart-range {
+        width: 100%;
+    }
+
+    .edu-chart {
+        min-height: 220px;
+    }
+}
+
+// A table in a narrow column becomes stacked cards, even when the viewport is
+// wide. Admin pages already render data-label on every cell.
+@container data-table (max-width: 46rem) {
+    .edu-table-cards {
+        thead {
+            display: none;
+        }
+
+        tbody tr {
+            display: block;
+            border: 1px solid var(--edu-border);
+            border-radius: var(--edu-radius-sm);
+            margin-bottom: var(--edu-space-3);
+            padding: var(--edu-space-2);
+            background: var(--edu-surface);
+        }
+
+        tbody td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--edu-space-3);
+            border: 0;
+            padding: 0.4rem 0.25rem;
+            text-align: right;
+        }
+
+        tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: var(--edu-fs-small);
+            color: var(--edu-muted);
+            text-align: left;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 3. Device / input attributes
+// -----------------------------------------------------------------------------
+
+// --- Phone -------------------------------------------------------------------
+html[data-device='mobile'] {
+    .edu-has-mobile-nav {
+        padding-bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+    }
+
+    .edu-fab {
+        bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+    }
+
+    .edu-post-image {
+        max-height: 60vh;
+    }
+
+    .edu-room-bar {
+        top: calc(var(--edu-navbar-height) + 0.25rem);
+    }
+}
+
+// --- Tablet ------------------------------------------------------------------
+// From 768 to 991px a touch tablet gets a permanent icon rail instead of a
+// hidden drawer. The labels live in the tooltip (title) and aria-label. This
+// only applies when the input is touch, so a narrow desktop window keeps the
+// ordinary offcanvas drawer.
+@media (min-width: 768px) and (max-width: 991.98px) {
+    html[data-device='tablet'][data-input='touch'] {
+        .edu-sidebar.offcanvas-lg {
+            position: sticky;
+            top: var(--edu-navbar-height);
+            display: flex !important;
+            flex-direction: column;
+            align-self: flex-start;
+            width: var(--edu-sidebar-collapsed-width);
+            min-width: 0; // a flex item's auto min-size would keep it 320px wide
+            max-height: calc(100dvh - var(--edu-navbar-height));
+            transform: none !important;
+            visibility: visible !important;
+            z-index: var(--edu-z-sidebar);
+        }
+
+        .edu-sidebar .offcanvas-header {
+            display: none !important;
+        }
+
+        .edu-sidebar .offcanvas-body {
+            padding-inline: 0.55rem;
+        }
+
+        .edu-sidebar .edu-sidebar-label,
+        .edu-sidebar .edu-sidebar-section,
+        .edu-sidebar .edu-sidebar-logo-text,
+        .edu-sidebar .edu-sidebar-user-text,
+        .edu-sidebar .edu-sidebar-user .badge,
+        .edu-sidebar .nav-link .badge {
+            display: none !important;
+        }
+
+        .edu-sidebar .nav-link {
+            justify-content: center;
+            padding-inline: 0.55rem;
+            min-height: 46px;
+        }
+
+        .edu-sidebar .nav-link i {
+            margin: 0;
+        }
+
+        .edu-sidebar .nav-link.active::before {
+            inset-inline-start: -0.55rem;
+        }
+
+        .edu-sidebar .edu-sidebar-logo {
+            justify-content: center;
+            padding-inline: 0;
+        }
+
+        .edu-sidebar .edu-sidebar-user {
+            padding: 0.6rem;
+            text-align: center;
+        }
+
+        .edu-sidebar .edu-sidebar-user .d-flex {
+            justify-content: center;
+        }
+
+        .edu-sidebar .edu-sidebar-footer-link {
+            justify-content: center;
+        }
+
+        .edu-navbar [data-bs-target='#appSidebar'] {
+            display: none !important;
+        }
+
+        .edu-has-mobile-nav {
+            padding-bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+        }
+    }
+}
+
+// --- TV / very large screens -------------------------------------------------
+html[data-device='tv'] {
+    font-size: 20px;
+
+    body {
+        font-size: 1rem;
+    }
+
+    .edu-navbar {
+        min-height: 84px;
+    }
+
+    .edu-sidebar {
+        --edu-sidebar-width: 300px;
+    }
+
+    .edu-main-inner > .container-xxl,
+    .edu-navbar > .container-xxl {
+        max-width: 2000px;
+    }
+
+    .edu-navbar-title {
+        max-width: 34rem;
+        font-size: 1.1rem;
+    }
+
+    .edu-hero {
+        padding: clamp(2rem, 1.5rem + 2vw, 3.25rem);
+    }
+
+    // D-pad focus must be obvious from three metres away.
+    :focus-visible {
+        outline: 4px solid #fbbf24 !important;
+        outline-offset: 4px !important;
+    }
+
+    .edu-feature-card:hover,
+    .edu-card-hover:hover {
+        transform: none;
+    }
+
+    .edu-post-image {
+        max-height: 70dvh;
+    }
+}
+
+// --- Touch / coarse pointers -------------------------------------------------
+html[data-input='touch'] {
+    .btn,
+    .btn-sm,
+    .nav-link,
+    .dropdown-item,
+    .list-group-item-action,
+    .page-link,
+    .edu-filter-chip,
+    .edu-mobile-nav-item,
+    .password-toggle,
+    .form-check-input {
+        min-height: var(--edu-tap-target);
+    }
+
+    .btn-sm {
+        padding-block: 0.5rem;
+    }
+
+    .form-control,
+    .form-select,
+    .form-control-sm,
+    .form-select-sm,
+    textarea.form-control {
+        font-size: 16px;
+    }
+
+    // A close button is an action, not decoration: 44 × 44 even inside a
+    // narrow alert or the network banner.
+    .btn-close {
+        flex: 0 0 auto;
+        width: var(--edu-tap-target);
+        height: var(--edu-tap-target);
+        padding: 0;
+        background-size: 1rem auto;
+        background-position: center;
+        border-radius: 50%;
+    }
+
+    // The logo is the "home" link on every page.
+    .navbar-brand {
+        min-width: var(--edu-tap-target);
+    }
+
+    // A list title is a 14px line, but it is also the row's only action.
+    // The padding grows the tap target to 44px and the matching negative
+    // margin keeps the row visually unchanged; z-index makes the enlarged
+    // area win over the (non-interactive) metadata line below it.
+    .edu-list-title {
+        position: relative;
+        z-index: 1;
+        padding-block: 0.7rem;
+        margin-block: -0.7rem;
+    }
+
+    // Hover is decoration, never the only way to reveal an action.
+    .edu-feature-card:hover,
+    .edu-card-hover:hover {
+        transform: none;
+    }
+}
+
+// --- Phone bottom bar: predictable height -----------------------------------
+// The bar keeps its copy short (see mobile-nav.blade.php) and never wraps, so
+// the reserved page padding below always matches the real bar and the last
+// card of a page can never sit behind it.
+@media (max-width: 991.98px) {
+    .edu-mobile-nav {
+        height: var(--edu-mobile-nav-height);
+        padding-bottom: var(--edu-safe-bottom);
+        overflow: hidden;
+    }
+
+    .edu-mobile-nav-item {
+        min-height: 0;
+        gap: 2px;
+        padding: 0.4rem 0.2rem;
+        overflow: hidden;
+    }
+
+    .edu-mobile-nav-item i,
+    .edu-mobile-nav-item svg {
+        flex: 0 0 auto;
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .edu-mobile-nav-label {
+        display: block;
+        max-width: 100%;
+        font-size: clamp(0.625rem, 2.6vw, 0.75rem);
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 4. Slow network / Save-Data
+// -----------------------------------------------------------------------------
+
+html[data-network='slow'],
+html[data-save-data='true'] {
+    .edu-page,
+    .edu-toast,
+    .edu-live-dot,
+    .edu-chart-skeleton span,
+    .edu-skeleton,
+    .edu-shimmer,
+    .btn.is-loading::after,
+    .edu-pull-indicator.is-refreshing i {
+        animation: none !important;
+    }
+
+    .edu-landing-shape,
+    .edu-hero::after,
+    .edu-auth-brand::before,
+    .edu-auth-brand::after,
+    .edu-empty-illustration::after {
+        display: none !important;
+    }
+
+    .edu-hero,
+    .edu-auth-brand,
+    .edu-stats-strip,
+    .edu-mockup-stage {
+        background-image: none !important;
+    }
+
+    .edu-post-image {
+        max-height: 360px;
+    }
+
+    // Decorative sparklines are the first thing to drop; the number stays.
+    .edu-sparkline {
+        opacity: 0.6;
+    }
+}
+
+@media (prefers-reduced-data: reduce) {
+    .edu-landing-shape,
+    .edu-hero::after,
+    .edu-auth-brand::before,
+    .edu-auth-brand::after {
+        display: none !important;
+    }
+
+    .edu-hero,
+    .edu-auth-brand,
+    .edu-stats-strip,
+    .edu-mockup-stage {
+        background-image: none !important;
+    }
+
+    .edu-post-image {
+        max-height: 340px;
+    }
+}
+
+// An explicit online/offline state for any component that wants it.
+html[data-online='false'] {
+    .edu-online-only {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+    .edu-offline-hide {
+        display: none !important;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 5. Modal bottom sheet on phones (instead of a full-screen page)
+// -----------------------------------------------------------------------------
+
+@media (max-width: 575.98px) {
+    .modal {
+        padding-inline: 0;
+        overflow-y: auto;
+    }
+
+    .modal .modal-dialog,
+    .modal-dialog.modal-fullscreen-sm-down {
+        display: flex;
+        align-items: flex-end;
+        width: 100%;
+        max-width: none;
+        min-height: 0;
+        height: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    .modal .modal-content,
+    .modal-dialog.modal-fullscreen-sm-down .modal-content {
+        width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: 92dvh;
+        margin: 0;
+        border-radius: var(--edu-radius-lg) var(--edu-radius-lg) 0 0;
+        padding-bottom: var(--edu-safe-bottom);
+        overflow: hidden;
+    }
+
+    // A small handle makes the sheet feel like a sheet, not a cut-off dialog.
+    .modal .modal-content::before {
+        content: '';
+        display: block;
+        width: 42px;
+        height: 4px;
+        margin: 0.55rem auto 0.2rem;
+        border-radius: 999px;
+        background: var(--edu-border-strong);
+        flex: 0 0 auto;
+    }
+
+    .modal .modal-body {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .modal .modal-header,
+    .modal .modal-footer {
+        flex-shrink: 0;
+    }
+}
+
+// Dropdowns and popovers can never run off the screen edge (Popper flips them;
+// this is the long-menu safety net).
+.dropdown-menu {
+    max-width: calc(100vw - 1rem);
+}
+
+.notification-menu {
+    max-height: min(72dvh, 32rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+// -----------------------------------------------------------------------------
+// 6. Tables: a visible fade only when there is more to scroll
+// -----------------------------------------------------------------------------
+
+.table-responsive {
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+}
+
+.table-responsive.is-scrollable:not(.is-at-end) {
+    box-shadow: inset -26px 0 20px -20px rgba(15, 23, 42, 0.35);
+}
+
+[dir='rtl'] .table-responsive.is-scrollable:not(.is-at-start) {
+    box-shadow: inset 26px 0 20px -20px rgba(15, 23, 42, 0.35);
+}
+
+.table-responsive:focus-visible {
+    outline: var(--edu-focus-width) solid var(--edu-focus-color);
+    outline-offset: 2px;
+}
+
+// -----------------------------------------------------------------------------
+// 7. Large-text preference (stored in localStorage, toggled from the menus)
+// -----------------------------------------------------------------------------
+
+html.edu-large-text {
+    font-size: 112.5%;
+
+    .edu-navbar-title {
+        max-width: 18rem;
+    }
+
+    .edu-mobile-nav-item {
+        font-size: 0.72rem;
+    }
+
+    .edu-table-search .form-control {
+        min-width: 12rem;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 8. Preferences: contrast, forced colours, standalone, retina
+// -----------------------------------------------------------------------------
+
+@media (prefers-contrast: more) {
+    :root {
+        --edu-border: #94a3b8;
+        --edu-border-strong: #475569;
+        --edu-muted: #334155;
+        --edu-muted-strong: #1e293b;
+    }
+
+    [data-bs-theme='dark'] {
+        --edu-border: #64748b;
+        --edu-border-strong: #94a3b8;
+        --edu-muted: #cbd5e1;
+        --edu-muted-strong: #e2e8f0;
+    }
+
+    .card,
+    .modal-content,
+    .dropdown-menu,
+    .offcanvas,
+    .form-control,
+    .form-select,
+    .btn {
+        border-width: 2px;
+    }
+
+    a:not(.btn):not(.nav-link):not(.dropdown-item) {
+        text-decoration: underline;
+        text-underline-offset: 0.18em;
+    }
+
+    :focus-visible {
+        outline-width: 4px;
+    }
+}
+
+@media (forced-colors: active) {
+    // Gradients and decorative circles disappear; system colours take over.
+    .edu-sidebar,
+    .edu-hero,
+    .edu-auth-brand,
+    .edu-stats-strip,
+    .edu-landing-hero,
+    .edu-mockup-stage {
+        background: Canvas !important;
+        color: CanvasText !important;
+        forced-color-adjust: auto;
+    }
+
+    .edu-sidebar .nav-link,
+    .edu-sidebar .nav-link i,
+    .edu-sidebar-logo,
+    .edu-sidebar-user-name {
+        color: LinkText !important;
+    }
+
+    .edu-sidebar .nav-link.active {
+        background: Highlight !important;
+        color: HighlightText !important;
+    }
+
+    .edu-sidebar .nav-link.active i {
+        color: HighlightText !important;
+    }
+
+    .edu-navbar,
+    .card,
+    .modal-content,
+    .dropdown-menu,
+    .offcanvas,
+    .edu-mobile-nav,
+    .edu-network-banner,
+    .edu-sw-update {
+        border: 1px solid CanvasText;
+        forced-color-adjust: auto;
+    }
+
+    .edu-landing-shape,
+    .edu-hero::after,
+    .edu-auth-brand::before,
+    .edu-auth-brand::after,
+    .edu-empty-illustration::after,
+    .edu-mockup-shape,
+    .edu-live-dot {
+        display: none !important;
+    }
+
+    :focus-visible {
+        outline: 3px solid Highlight !important;
+        outline-offset: 3px !important;
+    }
+}
+
+html[data-standalone='true'] {
+    [data-install-app] {
+        display: none !important;
+    }
+
+    .edu-navbar {
+        padding-top: max(0.55rem, var(--edu-safe-top));
+    }
+}
+
+@media (min-resolution: 2dppx) {
+    // Keep text crisp on Retina/4K screens without asking for new assets.
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    .edu-post-image,
+    .avatar,
+    .avatar-sm,
+    .avatar-lg,
+    .avatar-xl {
+        image-rendering: auto;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 9. RTL support (dir="rtl" is set by both layouts from the application locale)
+// -----------------------------------------------------------------------------
+
+[dir='rtl'] {
+    body {
+        text-align: right;
+    }
+
+    .edu-sidebar {
+        border-right: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .edu-sidebar .nav-link.active::before {
+        left: auto;
+        right: -0.85rem;
+        border-radius: 3px 0 0 3px;
+    }
+
+    .edu-sidebar .nav-link .badge {
+        margin-left: 0;
+        margin-right: auto;
+    }
+
+    .edu-navbar .border-start {
+        border-left: 0 !important;
+        border-right: 1px solid var(--edu-border) !important;
+        margin-left: 0 !important;
+        margin-right: 1rem !important;
+        padding-left: 0 !important;
+        padding-right: 1rem !important;
+    }
+
+    .notification-unread {
+        border-left: 0;
+        border-right: 3px solid var(--edu-primary);
+    }
+
+    .edu-mobile-nav-badge {
+        left: auto;
+        right: 50%;
+        margin-left: 0;
+        margin-right: 6px;
+    }
+
+    .edu-fab {
+        right: auto;
+        left: var(--edu-space-4);
+    }
+
+    .edu-toast-stack {
+        right: auto;
+        left: var(--edu-space-4);
+    }
+
+    .edu-table-search i {
+        left: auto;
+        right: 0.65rem;
+    }
+
+    .edu-table-search .form-control {
+        padding-left: 0.75rem;
+        padding-right: 2rem;
+    }
+
+    .edu-table-cards tbody td {
+        text-align: left;
+    }
+
+    .edu-table-cards tbody td::before {
+        text-align: right;
+    }
+
+    .breadcrumb-item + .breadcrumb-item {
+        padding-left: 0;
+        padding-right: var(--bs-breadcrumb-item-padding-x);
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        float: right;
+        padding-right: 0;
+        padding-left: var(--bs-breadcrumb-item-padding-x);
+        transform: scaleX(-1);
+    }
+
+    .dropdown-menu-end {
+        right: auto;
+        left: 0;
+    }
+
+    .form-select {
+        padding-right: 0.75rem;
+        padding-left: 2.25rem;
+        background-position: left 0.75rem center;
+    }
+
+    .input-group > :not(:first-child):not(.dropdown-menu):not(.valid-tooltip):not(.valid-feedback):not(.invalid-tooltip):not(.invalid-feedback) {
+        margin-left: 0;
+        margin-right: -1px;
+        border-top-left-radius: var(--bs-border-radius);
+        border-bottom-left-radius: var(--bs-border-radius);
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .input-group > :not(:last-child):not(.dropdown-toggle):not(.dropdown-menu):not(.form-floating) {
+        border-top-right-radius: var(--bs-border-radius);
+        border-bottom-right-radius: var(--bs-border-radius);
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    .bi-chevron-left,
+    .bi-chevron-right,
+    .bi-arrow-left,
+    .bi-arrow-right,
+    .bi-arrow-up-right,
+    .bi-box-arrow-right {
+        transform: scaleX(-1);
+    }
+
+    .edu-scroll-x {
+        direction: rtl;
+    }
+
+    .edu-pull-indicator {
+        direction: ltr;
+    }
+
+    .edu-table-responsive:focus-visible {
+        outline-offset: -2px;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 10. PWA: install button, network banner, update prompt, pull indicator
+// -----------------------------------------------------------------------------
+
+[data-install-app][hidden] {
+    display: none !important;
+}
+
+.edu-network-banner {
+    position: fixed;
+    inset-inline: 0.75rem;
+    top: calc(var(--edu-navbar-height) + 0.5rem);
+    z-index: calc(var(--edu-z-fab) + 10);
+    display: flex;
+    align-items: center;
+    gap: var(--edu-space-2);
+    width: min(42rem, calc(100vw - 1.5rem));
+    margin-inline: auto;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--edu-border);
+    border-radius: 999px;
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    font-size: var(--edu-fs-small);
+    opacity: 0;
+    transform: translateY(-0.4rem);
+    transition: opacity var(--edu-transition), transform var(--edu-transition);
+    pointer-events: none;
+}
+
+.edu-network-banner.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.edu-network-banner[data-state='offline'] {
+    border-color: color-mix(in srgb, var(--edu-danger) 40%, var(--edu-border));
+    background: color-mix(in srgb, var(--edu-danger) 8%, var(--edu-surface));
+}
+
+.edu-network-banner[data-state='slow'] {
+    border-color: color-mix(in srgb, var(--edu-warning) 45%, var(--edu-border));
+    background: color-mix(in srgb, var(--edu-warning) 10%, var(--edu-surface));
+}
+
+.edu-network-banner[data-state='online'] {
+    border-color: color-mix(in srgb, var(--edu-success) 45%, var(--edu-border));
+    background: color-mix(in srgb, var(--edu-success) 9%, var(--edu-surface));
+}
+
+.edu-network-banner [data-network-message] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.edu-sw-update {
+    position: fixed;
+    inset-inline: var(--edu-space-4);
+    bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-3));
+    z-index: var(--edu-z-toast);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--edu-space-2);
+    width: min(30rem, calc(100vw - 2 * var(--edu-space-4)));
+    margin-inline: auto;
+    padding: var(--edu-space-3);
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius-sm);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    font-size: var(--edu-fs-small);
+}
+
+.edu-sw-update > span {
+    flex: 1 1 12rem;
+}
+
+.edu-pull-indicator {
+    position: fixed;
+    top: calc(var(--edu-navbar-height) + 0.75rem);
+    left: 50%;
+    z-index: calc(var(--edu-z-fab) + 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--edu-pull-size);
+    height: var(--edu-pull-size);
+    margin-left: calc(var(--edu-pull-size) / -2);
+    border-radius: 50%;
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    color: var(--edu-primary);
+    box-shadow: var(--edu-shadow-pop);
+    opacity: 0;
+    transform: translateY(-54px);
+    transition: opacity 120ms ease;
+    pointer-events: none;
+}
+
+.edu-pull-indicator.is-visible {
+    opacity: 1;
+}
+
+.edu-pull-indicator.is-refreshing i {
+    animation: edu-spin 0.7s linear infinite;
+}
+
+@media (max-width: 575.98px) {
+    .edu-network-banner {
+        top: auto;
+        bottom: calc(var(--edu-mobile-nav-height) + 0.5rem);
+        width: calc(100vw - 1.5rem);
+        border-radius: var(--edu-radius-sm);
+    }
+
+    .edu-sw-update {
+        bottom: calc(var(--edu-mobile-nav-height) + 0.75rem);
+    }
+}
+
+// Auth pages have no bottom navigation.
+.edu-auth-body ~ .edu-network-banner,
+body.edu-auth-body .edu-network-banner {
+    bottom: 0.75rem;
+}
+
+// Guest pages have no navbar, so the display controls float above the form.
+.edu-auth-tools {
+    position: fixed;
+    top: max(0.65rem, var(--edu-safe-top));
+    inset-inline-end: max(0.65rem, var(--edu-safe-right));
+    z-index: calc(var(--edu-z-fab) + 2);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border: 1px solid var(--edu-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--edu-surface) 88%, transparent);
+    box-shadow: var(--edu-shadow-xs);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.edu-auth-tools .btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+}
+
+
+// -----------------------------------------------------------------------------
+// 11. Native <dialog> used for keyboard shortcuts and the iOS install help
+// -----------------------------------------------------------------------------
+
+dialog.edu-dialog {
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: min(86dvh, 40rem);
+    padding: 0;
+    border: 1px solid var(--edu-border);
+    border-radius: var(--edu-radius);
+    background: var(--edu-surface);
+    color: var(--edu-text);
+    box-shadow: var(--edu-shadow-pop);
+    overflow: auto;
+}
+
+dialog.edu-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.edu-dialog-head {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--edu-space-2);
+    padding: var(--edu-space-3) var(--edu-space-4);
+    border-bottom: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+}
+
+.edu-dialog-body {
+    padding: var(--edu-space-4);
+}
+
+.edu-shortcut-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem var(--edu-space-3);
+    margin: 0;
+    font-size: var(--edu-fs-small);
+}
+
+.edu-shortcut-list dt {
+    font-weight: 500;
+    color: var(--edu-text-soft);
+}
+
+.edu-shortcut-list dd {
+    margin: 0;
+    text-align: end;
+}
+
+.edu-shortcut-list kbd {
+    display: inline-block;
+    min-width: 1.8em;
+    padding: 0.12rem 0.38rem;
+    border: 1px solid var(--edu-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 0.35rem;
+    background: var(--edu-surface-soft);
+    color: var(--edu-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78em;
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    dialog.edu-dialog {
+        width: 100%;
+        max-width: none;
+        max-height: 92dvh;
+        margin: auto 0 0;
+        border-radius: var(--edu-radius-lg) var(--edu-radius-lg) 0 0;
+        border-bottom: 0;
+    }
+
+    .edu-dialog-body {
+        padding-bottom: calc(var(--edu-space-4) + var(--edu-safe-bottom));
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 12. Small-screen and landscape corrections
+// -----------------------------------------------------------------------------
+
+@media (max-width: 575.98px) {
+    .edu-card-pad,
+    .edu-stat-card .card-body {
+        padding: var(--edu-card-pad-fluid);
+    }
+
+    .edu-post-image {
+        max-height: 52dvh;
+    }
+
+    .edu-greeting h1 {
+        font-size: var(--edu-h1-fluid);
+    }
+
+    .edu-quick-actions .btn {
+        min-height: var(--edu-tap-target);
+    }
+
+    .edu-chart {
+        min-height: 210px;
+    }
+}
+
+// Landscape phones: keep the fixed bars out of the way and give the video room
+// every available pixel (Phase 3D already hides the bottom bar).
+@media (orientation: landscape) and (max-height: 520px) {
+    .edu-network-banner {
+        top: 0.35rem;
+        bottom: auto;
+    }
+
+    .edu-post-image {
+        max-height: 70dvh;
+    }
+
+    .modal .modal-content,
+    .modal-dialog.modal-fullscreen-sm-down .modal-content {
+        max-height: 96dvh;
+    }
+
+    .jitsi-frame {
+        min-height: 200px;
+    }
+}
+
+// High zoom / very narrow effective viewport: one column and no gutters lost.
+@media (max-width: 359.98px) {
+    .edu-auto-grid {
+        grid-template-columns: 1fr;
+        gap: var(--edu-space-3);
+    }
+
+    .edu-network-banner {
+        font-size: 0.75rem;
+    }
+}
+
+// 4K / ultra-wide: centre the content and stop text lines stretching.
+@media (min-width: 2000px) {
+    .edu-main-inner > .container-xxl,
+    .edu-main-inner > .container-fluid {
+        max-width: var(--edu-content-max);
+        margin-inline: auto;
+    }
+
+    .edu-landing-hero .container-xxl,
+    .edu-landing-section .container-xxl {
+        max-width: 1500px;
+    }
+
+    .post-body,
+    .edu-post-body {
+        max-width: var(--edu-reading-measure);
+    }
+}
+
+// A user who shrinks the browser window to a phone width gets the phone
+// chrome even if the device is a touch laptop.
+@media (max-width: 575.98px) {
+    .edu-has-mobile-nav {
+        padding-bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 13. Foldable / dual-screen devices (Galaxy Fold, Surface Duo)
+// -----------------------------------------------------------------------------
+// The CSS Environment Variables API (viewport segments) is currently behind
+// flags, but the @media (horizontal-viewport-segments: 2) / (vertical-viewport-
+// segments: 2) queries already work on Chromium-based browsers and Edge.
+// When the device is in a spanning posture we split the content at the fold
+// using CSS Grid with the fold as a gutter.
+
+@media (horizontal-viewport-segments: 2) {
+    // Two panels side by side: sidebar (left) | content (right)
+    .edu-shell {
+        display: grid;
+        grid-template-columns:
+            env(viewport-segment-width 0 0, 1fr)
+            env(viewport-segment-width 1 0, 1fr);
+        grid-template-rows: 1fr;
+        gap: 0;
+        min-height: 100dvh;
+    }
+
+    .edu-sidebar {
+        // The fold gutter gap already acts as visual separation.
+        border-right: 0 !important;
+        max-height: 100dvh;
+        overflow-y: auto;
+    }
+
+    .edu-main {
+        min-width: 0;
+        overflow-y: auto;
+        max-height: 100dvh;
+    }
+
+    // Navigation spans across both panes at the top.
+    .edu-navbar {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+}
+
+@media (vertical-viewport-segments: 2) {
+    // Two panels stacked: content (top) | keyboard/info (bottom)
+    .edu-shell {
+        min-height: env(viewport-segment-height 0 0, 50dvh);
+    }
+
+    .edu-main {
+        max-height: env(viewport-segment-height 0 0, 50dvh);
+        overflow-y: auto;
+    }
+}
+
+// Legacy spanning media query (Surface Duo via Chromium)
+@media (spanning: single-fold-horizontal) {
+    .edu-shell {
+        min-height: calc(env(fold-top) - var(--edu-navbar-height));
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 14. Print layout
+// -----------------------------------------------------------------------------
+
+@media print {
+    .edu-navbar,
+    .edu-sidebar,
+    .edu-mobile-nav,
+    .edu-fab,
+    .edu-network-banner,
+    .edu-sw-update,
+    .edu-pull-indicator,
+    [data-install-app],
+    [data-sidebar-toggle],
+    [data-bs-toggle='offcanvas'],
+    .dropdown-menu {
+        display: none !important;
+    }
+
+    .edu-main {
+        margin: 0 !important;
+    }
+
+    .edu-body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+
+    a[href]::after {
+        content: ' (' attr(href) ')';
+        font-size: 0.75em;
+        color: #666;
+    }
+
+    a[href^='#']::after,
+    a[href^='javascript']::after {
+        content: '';
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 15. Image aspect-ratio enforcement (prevent CLS on all images)
+// -----------------------------------------------------------------------------
+
+// Avatars always render as squares — even if the browser mis-resolves the
+// src before the CSS loads (which would normally produce a 0-height box).
+.avatar,
+.avatar-sm,
+.avatar-lg,
+.avatar-xl,
+.edu-avatar-initials {
+    aspect-ratio: 1;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+// Post / class hero images: the container holds aspect-ratio; the <img> fills it.
+.edu-post-media img,
+.edu-class-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+// -----------------------------------------------------------------------------
+// 16. Typography: line-length cap for prose
+// -----------------------------------------------------------------------------
+
+// Comfortable 45-75 character measure for every prose block. Class names
+// already exist in app.scss; this makes sure they are never wider than the
+// containing card, not the viewport.
+.edu-measure,
+.post-body,
+.edu-post-body,
+.edu-comment-body {
+    max-width: min(var(--edu-reading-measure), 100%);
+}
+
+// Overflow-wrap catch-all for every user-generated surface.
+.card,
+.offcanvas,
+.modal-content,
+.dropdown-menu {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+// Long hashtags, emails and URLs inside a narrow card never widen it.
+.edu-hashtag,
+.edu-mention,
+a[href] {
+    overflow-wrap: anywhere;
+}
+
+// No horizontal scroll on the page body itself, ever.
+html {
+    overflow-x: hidden;
+}
+
+// -----------------------------------------------------------------------------
+// 17. Form two-column layout (tablet / desktop)
+// -----------------------------------------------------------------------------
+
+// Forms that use .edu-form-grid automatically become two columns from 768px
+// upwards. The grid collapses to one column at ≤ 767px without any extra
+// HTML (no swapping out of col-* classes needed).
+.edu-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--edu-space-4);
+}
+
+@media (min-width: 768px) {
+    .edu-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .edu-form-grid .edu-form-full {
+        grid-column: 1 / -1;
+    }
+}
+
+// Date / time inputs: use native pickers on touch devices (they show the
+// system picker) and the default desktop pickers elsewhere. No extra JS.
+@media (pointer: coarse) {
+    input[type='date'],
+    input[type='time'],
+    input[type='datetime-local'],
+    input[type='month'],
+    input[type='week'] {
+        // Browsers on touch devices open the system date picker on focus
+        // — just make sure the font size is 16px to prevent iOS zoom.
+        font-size: 16px;
+        min-height: var(--edu-tap-target);
+        cursor: pointer;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 18. Focus rings: TV and high-contrast boosted
+// -----------------------------------------------------------------------------
+
+// Standard (defined in _responsive.scss and app.scss) — 3px solid primary.
+// Here we only add the TV override (yellow, thick, far offset) which must
+// beat the specificity of the standard rules.
+html[data-device='tv'] {
+    :focus-visible {
+        outline: 5px solid #fde68a !important;
+        outline-offset: 5px !important;
+        border-radius: 4px;
+    }
+}
+
+// Keyboard-only mode detection: once Tab is pressed, switch to a richer ring.
+html.edu-keyboard :focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
+}
+
+// -----------------------------------------------------------------------------
+// 19. Smooth image loading utilities
+// -----------------------------------------------------------------------------
+
+// Retina-aware srcset hint: not a CSS feature, but these rules make images
+// stay crisp when the browser chooses a 2× descriptor.
+@media (min-resolution: 2dppx) {
+    img {
+        image-rendering: auto; // let the browser pick the best algorithm
+    }
+
+    img[srcset] {
+        // Already handled by the browser choosing the right descriptor.
+        // Nothing extra needed, but document the intent.
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 20. Split-screen and small floating-window detection
+// -----------------------------------------------------------------------------
+
+// When the effective viewport is very narrow (e.g. split-screen on iPad or a
+// floating Chrome window) but the device is still a tablet or desktop, the
+// phone chrome applies automatically because the breakpoint is now < 576px.
+// We just need to make sure the mobile-nav padding is correct.
+@media (max-width: 575.98px) {
+    // This ensures the bottom nav clearance is always applied, even when the
+    // device data-attribute says "tablet" or "desktop" (floating window).
+    .edu-has-mobile-nav {
+        padding-bottom: calc(var(--edu-mobile-nav-height) + var(--edu-space-2));
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 21. Keyboard-focus mode (Tab activates richer focus indicators)
+// -----------------------------------------------------------------------------
+
+// Enabled in adaptive.js when the first Tab key is pressed, disabled again
+// when a mouse/touch event occurs. The transition prevents a flash of ring
+// when clicking elements that temporarily receive focus programmatically.
+html:not(.edu-keyboard) :focus:not(:focus-visible) {
+    outline: none;
+}

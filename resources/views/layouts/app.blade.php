@@ -1,5 +1,10 @@
+@php
+    // Phase 3F: right-to-left languages mirror the whole layout, not only text.
+    $eduLocale = app()->getLocale();
+    $eduDir = in_array($eduLocale, config('educonnect.rtl_locales', []), true) ? 'rtl' : 'ltr';
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', $eduLocale) }}" dir="{{ $eduDir }}">
     <head>
         <meta charset="utf-8">
         {{-- viewport-fit=cover lets the layout own the notch/home-indicator
@@ -31,11 +36,16 @@
         <meta name="twitter:title" content="{{ $fullTitle }}">
         <meta name="twitter:description" content="{{ $pageDescription }}">
 
-        {{-- Favicon and browser chrome colours (light + dark). --}}
+        {{-- Favicon, installable app icons and browser chrome colours. --}}
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+        <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'EduConnect') }}">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="mobile-web-app-capable" content="yes">
         <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
-        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+        <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
 
         {{-- Theme first: before the stylesheet so there is no flash of the
              wrong colour scheme. Explicit choice wins, then the OS setting. --}}
@@ -66,6 +76,9 @@
             }
         </script>
 
+        {{-- Phase 3F: device / input / orientation / network flags before paint. --}}
+        @include('layouts.adaptive-head')
+
         {{-- Inter is loaded from Google Fonts (allowed by the phase brief). --}}
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,12 +97,25 @@
         $isLandingPage = request()->is('/');
     @endphp
 
-    {{-- body carries the notification polling URL for logged in users (FR-24) --}}
+    {{-- body carries the notification polling URL for logged in users (FR-24)
+         and the destinations for the keyboard shortcuts (Phase 3F). --}}
     <body class="edu-body d-flex flex-column min-vh-100 {{ auth()->check() && ! $isLandingPage ? 'edu-has-mobile-nav' : '' }}"
-          @auth data-notification-url="{{ route('notifications.poll') }}" @endauth>
+          @auth data-notification-url="{{ route('notifications.poll') }}"
+                data-shortcut-dashboard="{{ route('dashboard') }}"
+                data-shortcut-feed="{{ route('feed.index') }}"
+                data-shortcut-notifications="{{ route('notifications.index') }}"
+                data-shortcut-profile="{{ route('users.show', auth()->id()) }}"
+                data-shortcut-new-post="{{ route('posts.create') }}" @endauth
+          data-sw-update-text="{{ __('A new version of EduConnect is ready.') }}"
+          data-sw-reload-text="{{ __('Reload') }}"
+          data-sw-reloading-text="{{ __('Reloading…') }}"
+          data-sw-later-text="{{ __('Later') }}">
         <a class="visually-hidden-focusable edu-skip-link" href="#main-content" style="position:fixed;">
             {{ __('Skip to main content') }}
         </a>
+
+        {{-- Offline / Save-Data / slow connection notice (Phase 3F). --}}
+        @include('layouts.network-banner')
 
         {{-- Sticky, blurred top navigation bar --}}
         @include('layouts.navigation', ['unreadNotifications' => $layoutUnreadCount])
@@ -158,5 +184,8 @@
                 @endif
             @endunless
         @endauth
+
+        {{-- Keyboard shortcut help, iOS install help and large-text control. --}}
+        @include('layouts.shortcuts')
     </body>
 </html>
