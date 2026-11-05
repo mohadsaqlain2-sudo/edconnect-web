@@ -11,7 +11,7 @@
             <span class="edu-landing-shape is-two" aria-hidden="true"></span>
 
             <div class="container-xxl px-3 px-lg-4 position-relative">
-                <div class="row align-items-center g-5">
+                <div class="row align-items-start g-4 g-lg-5 pt-2">
                     <div class="col-12 col-lg-6">
                         <span class="edu-eyebrow mb-3">
                             <i class="bi bi-stars" aria-hidden="true"></i>
