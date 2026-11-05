@@ -20,7 +20,6 @@
             ]],
             ['label' => 'Community', 'items' => [
                 ['label' => 'Feed', 'icon' => 'bi-rss', 'route' => 'feed.index'],
-                ['label' => 'Notifications', 'icon' => 'bi-bell', 'route' => 'notifications.index'],
             ]],
         ],
         \App\Models\User::ROLE_TEACHER => [
@@ -32,7 +31,6 @@
             ]],
             ['label' => 'Community', 'items' => [
                 ['label' => 'Feed', 'icon' => 'bi-chat-square-text', 'route' => 'feed.index'],
-                ['label' => 'Notifications', 'icon' => 'bi-bell', 'route' => 'notifications.index'],
             ]],
             ['label' => 'Account', 'items' => [
                 ['label' => 'My Profile', 'icon' => 'bi-person', 'route' => 'users.show', 'params' => [$me->id]],
@@ -46,7 +44,6 @@
             ]],
             ['label' => 'Community', 'items' => [
                 ['label' => 'Feed', 'icon' => 'bi-chat-square-text', 'route' => 'feed.index'],
-                ['label' => 'Notifications', 'icon' => 'bi-bell', 'route' => 'notifications.index'],
             ]],
             ['label' => 'Account', 'items' => [
                 ['label' => 'My Profile', 'icon' => 'bi-person', 'route' => 'users.show', 'params' => [$me->id]],
