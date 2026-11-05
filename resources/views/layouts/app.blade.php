@@ -120,7 +120,7 @@
         {{-- Sticky, blurred top navigation bar --}}
         @include('layouts.navigation', ['unreadNotifications' => $layoutUnreadCount])
 
-        <div class="edu-shell flex-grow-1" id="appShell">
+        <div class="edu-shell flex-grow-1 {{ auth()->check() && ! $isLandingPage ? 'edu-has-sidebar' : '' }}" id="appShell">
             {{-- Role based sidebar: a column on desktop, an offcanvas drawer on phones.
                  Never on the public landing page. --}}
             @auth
