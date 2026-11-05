@@ -24,7 +24,7 @@
                         </h1>
 
                         <p class="lead text-muted mb-4 edu-measure">
-                            {{ __('Live video classes, a friendly social feed and simple class management â€” all in one place. Students follow their teachers and enroll in a class in a single click.') }}
+                            {{ __('Live video classes, a friendly social feed and simple class management "” all in one place. Students follow their teachers and enroll in a class in a single click.') }}
                         </p>
 
                         <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 mb-3">
@@ -212,7 +212,7 @@
                             </span>
                             <blockquote class="mb-3">
                                 <p class="h5 fw-semibold mb-0" id="quote-title">
-                                    {{ __('â€œMy students join from their phones, ask questions in the feed and never lose the thread between lessons.â€') }}
+                                    {{ __('"My students join from their phones, ask questions in the feed and never lose the thread between lessons."') }}
                                 </p>
                             </blockquote>
                             <figcaption class="small text-muted">
@@ -240,7 +240,7 @@
                             @foreach ([
                                 [__('Do I need to install anything?'), __('No. EduConnect runs in your browser. The video room opens in the same tab and works on phones, tablets and computers.')],
                                 [__('Is it free for students?'), __('Creating a Student account is free. Your school or teacher decides which classes are published.')],
-                                [__('How do teachers start a class?'), __('A teacher schedules a class, opens the room when ready and presses â€œStart classâ€. Enrolled students then see the Join button.')],
+                                [__('How do teachers start a class?'), __('A teacher schedules a class, opens the room when ready and presses "Start class". Enrolled students then see the Join button.')],
                                 [__('What happens if someone behaves badly?'), __('Any member can report a post or comment. Admins review reports, hide content and can block the account.')],
                                 [__('Can I use it on a slow connection?'), __('Yes. Pages are server-rendered, images are lazy-loaded and the video room degrades gracefully with a clear retry message.')],
                             ] as $index => [$question, $answer])

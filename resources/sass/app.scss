@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 // EduConnect stylesheet (Phase 3B premium dashboard design)
 // -----------------------------------------------------------------------------
 // Bootstrap 5 and Bootstrap Icons are pulled straight from node_modules and
@@ -100,11 +100,14 @@ small, .small {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.11em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--edu-primary);
+    background: var(--edu-primary-soft);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
 }
 
 .edu-muted {
@@ -582,7 +585,7 @@ button:focus-visible,
 // for the decorative ::before layer. On phones it is already fixed.
 @media (min-width: 992px) {
     .edu-sidebar {
-        // Fixed to the viewport � independent of the main page scroll
+        // Fixed to the viewport — independent of the main page scroll
         position: sticky;
         top: var(--edu-navbar-height);
         height: calc(100vh - var(--edu-navbar-height));
@@ -1791,7 +1794,7 @@ button:focus-visible,
 }
 
 // -----------------------------------------------------------------------------
-// Legacy application pages (feed, auth, live room) — kept intentionally
+// Legacy application pages (feed, auth, live room) â€” kept intentionally
 // -----------------------------------------------------------------------------
 
 .post-body {
@@ -1992,7 +1995,7 @@ button:focus-visible,
 }
 
 // -----------------------------------------------------------------------------
-// Phase 3C — component library additions
+// Phase 3C â€” component library additions
 // -----------------------------------------------------------------------------
 // Everything below is built from the tokens in _variables.scss: same spacing
 // steps, same radii, same transitions, same z-index ladder.
@@ -2438,17 +2441,12 @@ button:focus-visible,
 .edu-landing-hero {
     position: relative;
     overflow: hidden;
-    padding: var(--edu-space-6) 0 var(--edu-space-7);
-    background: linear-gradient(180deg, var(--edu-surface-soft) 0%, var(--edu-surface) 100%);
+    padding: var(--edu-space-8) 0 var(--edu-space-8);
+    background: linear-gradient(160deg, #f0f1ff 0%, #faf9ff 55%, var(--edu-surface) 100%);
 }
 
-.edu-landing-shape {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(6px);
-    pointer-events: none;
-    opacity: 0.55;
-}
+
+
 
 .edu-landing-shape.is-one {
     width: 380px;
@@ -2469,7 +2467,7 @@ button:focus-visible,
 .edu-landing-title {
     font-size: var(--edu-fs-display);
     line-height: 1.1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
 }
 
 // Mockup of the live-class screen: pure CSS, no image request.
@@ -2538,16 +2536,39 @@ button:focus-visible,
     border-radius: var(--edu-radius);
     background: var(--edu-surface);
     height: 100%;
+    box-shadow: var(--edu-shadow-xs);
+    transition: transform var(--edu-transition), box-shadow var(--edu-transition);
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--edu-shadow-card);
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        top: 0;
+        height: 3px;
+        border-radius: var(--edu-radius) var(--edu-radius) 0 0;
+        background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        opacity: 0;
+        transition: opacity var(--edu-transition);
+    }
+
+    &:hover::before {
+        opacity: 1;
+    }
 }
 
 .edu-step-number {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--edu-radius-xs);
-    background: var(--edu-primary-soft);
+    width: 40px;
+    height: 40px;
+    border-radius: var(--edu-radius-sm);
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     color: var(--edu-primary);
     font-weight: 700;
 }
@@ -2558,31 +2579,44 @@ button:focus-visible,
     border-radius: var(--edu-radius);
     background: var(--edu-surface);
     height: 100%;
+    box-shadow: var(--edu-shadow-xs);
     transition: transform var(--edu-transition), box-shadow var(--edu-transition),
-        border-color var(--edu-transition);
+        border-color var(--edu-transition), background var(--edu-transition);
 
     &:hover {
-        transform: translateY(-3px);
-        border-color: var(--edu-border-strong);
-        box-shadow: var(--edu-shadow-card);
+        transform: translateY(-5px);
+        border-color: rgba(79, 70, 229, 0.25);
+        box-shadow: var(--edu-shadow-hover);
+        background: linear-gradient(160deg, #faf9ff 0%, var(--edu-surface) 100%);
     }
 }
 
 .edu-stats-strip {
-    border-radius: var(--edu-radius);
-    background: linear-gradient(120deg, #312e81 0%, #4f46e5 100%);
+    border-radius: var(--edu-radius-lg);
+    background: linear-gradient(120deg, #1e1b6e 0%, #4f46e5 50%, #7c3aed 100%);
     color: #fff;
-    padding: var(--edu-space-6) var(--edu-space-5);
+    padding: var(--edu-space-6) var(--edu-space-6);
+    box-shadow: 0 8px 40px -12px rgba(79, 70, 229, 0.55);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 60% 80% at 80% 20%, rgba(255,255,255,0.07), transparent);
+        pointer-events: none;
+    }
 }
 
 .edu-stat-figure {
-    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-size: clamp(2rem, 1.4rem + 1.8vw, 2.75rem);
     font-weight: 800;
     line-height: 1.1;
 }
 
 .edu-landing-section {
-    padding: var(--edu-space-7) 0;
+    padding: calc(var(--edu-space-7) * 1.1) 0;
 }
 
 .edu-section-title {
@@ -2592,8 +2626,7 @@ button:focus-visible,
 
 // A tidy accordion: no double borders, the open item is clearly marked.
 .edu-faq .accordion-item {
-    border: 1px solid var(--edu-border);
-    border-radius: var(--edu-radius-sm);
+    transition: box-shadow var(--edu-transition);
     background: var(--edu-surface);
     margin-bottom: var(--edu-space-2);
     overflow: hidden;
@@ -2617,6 +2650,32 @@ button:focus-visible,
     background: var(--edu-surface-soft);
 }
 
+
+
+// Landing hero image polish
+.edu-landing-hero .img-fluid {
+    border-radius: var(--edu-radius-lg) !important;
+    box-shadow: 0 24px 60px -16px rgba(79, 70, 229, 0.30),
+                0 4px 16px -4px rgba(15, 23, 42, 0.12);
+    animation: edu-float 6s ease-in-out infinite;
+}
+
+@keyframes edu-float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+}
+
+// Hero text: staggered fade-in on load
+.edu-landing-hero .edu-eyebrow    { animation: edu-fade-up 0.55s var(--edu-ease) both; }
+.edu-landing-hero h1              { animation: edu-fade-up 0.55s 0.10s var(--edu-ease) both; }
+.edu-landing-hero .lead           { animation: edu-fade-up 0.55s 0.18s var(--edu-ease) both; }
+.edu-landing-hero .d-flex.gap-2   { animation: edu-fade-up 0.55s 0.26s var(--edu-ease) both; }
+.edu-landing-hero .col-lg-6:last-child { animation: edu-fade-up 0.6s 0.22s var(--edu-ease) both; }
+
+@keyframes edu-fade-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 // On phones the bottom navigation and the floating button need room.
 @media (max-width: 991.98px) {
     .edu-has-mobile-nav {
@@ -2624,6 +2683,38 @@ button:focus-visible,
     }
 }
 
+
+
+// Dark mode: landing page adjustments
+[data-bs-theme="dark"] {
+    .edu-landing {
+        background: var(--edu-surface);
+    }
+
+    .edu-landing-hero {
+        background: linear-gradient(160deg, #0d0c2b 0%, #0f0e1f 55%, var(--edu-surface) 100%);
+    }
+
+    .edu-step-card,
+    .edu-feature-card {
+        background: var(--edu-surface);
+        border-color: var(--edu-border);
+
+        &:hover {
+            background: var(--edu-surface-raised);
+            border-color: rgba(129, 140, 248, 0.3);
+        }
+    }
+
+    .edu-feature-card:hover {
+        background: linear-gradient(160deg, #151d35 0%, var(--edu-surface) 100%);
+    }
+
+    .edu-stats-strip {
+        background: linear-gradient(120deg, #13114d 0%, #2d2b8f 50%, #4f46e5 100%);
+        box-shadow: 0 8px 40px -12px rgba(79, 70, 229, 0.4);
+    }
+}
 // --- Phase 3C additions ------------------------------------------------------
 
 // Skip link: invisible until it receives keyboard focus, then a normal button.
@@ -2788,12 +2879,12 @@ button:focus-visible,
 }
 
 // -----------------------------------------------------------------------------
-// Phase 3D — responsive layer (imported last on purpose)
+// Phase 3D â€” responsive layer (imported last on purpose)
 // -----------------------------------------------------------------------------
 @import 'responsive';
 
 // -----------------------------------------------------------------------------
-// Phase 3F — adaptive layer: container queries, device attributes, PWA chrome,
+// Phase 3F â€” adaptive layer: container queries, device attributes, PWA chrome,
 // RTL, forced colours, TV and slow-network behaviour. Must stay last.
 // -----------------------------------------------------------------------------
 @import 'adaptive';
