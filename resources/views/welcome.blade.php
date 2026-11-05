@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="title">{{ __('Learn together, anywhere') }}</x-slot>
     <x-slot name="description">{{ __('EduConnect brings live video classes, a friendly social feed with posts and hashtags, and one-click class enrolment together for teachers and students.') }}</x-slot>
 
@@ -24,7 +24,7 @@
                         </h1>
 
                         <p class="lead text-muted mb-4 edu-measure">
-                            {{ __('Live video classes, a friendly social feed and simple class management — all in one place. Students follow their teachers and enroll in a class in a single click.') }}
+                            {{ __('Live video classes, a friendly social feed and simple class management â€” all in one place. Students follow their teachers and enroll in a class in a single click.') }}
                         </p>
 
                         <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 mb-3">
@@ -46,35 +46,10 @@
                     </div>
 
                     <div class="col-12 col-lg-6">
-                        {{-- CSS-only mockup of a live class: no image request, no layout shift. --}}
-                        <div class="edu-mockup" role="img"
-                             aria-label="{{ __('Preview of a live class: teacher video, shared notes and participant tiles.') }}">
-                            <div class="edu-mockup-bar" aria-hidden="true">
-                                <span class="edu-mockup-dot"></span>
-                                <span class="edu-mockup-dot"></span>
-                                <span class="edu-mockup-dot"></span>
-                                <span class="ms-auto small text-muted fw-semibold">{{ __('Algebra basics · Live') }}</span>
-                            </div>
-
-                            <div class="edu-mockup-stage">
-                                <span class="edu-mockup-tile" style="left: 6%; top: 8%; width: 58%; height: 58%;" aria-hidden="true"></span>
-                                <span class="edu-mockup-tile" style="right: 6%; top: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
-                                <span class="edu-mockup-tile" style="right: 6%; bottom: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
-                                <span class="edu-mockup-tile" style="left: 6%; bottom: 8%; width: 58%; height: 20%;" aria-hidden="true"></span>
-
-                                <span class="position-absolute top-0 start-0 m-3 badge text-bg-danger">
-                                    <i class="bi bi-broadcast me-1" aria-hidden="true"></i>{{ __('Live') }}
-                                </span>
-                            </div>
-
-                            <div class="edu-mockup-bar-strip" aria-hidden="true">
-                                <span class="edu-mockup-tool"><i class="bi bi-mic"></i></span>
-                                <span class="edu-mockup-tool"><i class="bi bi-camera-video"></i></span>
-                                <span class="edu-mockup-tool"><i class="bi bi-chat-dots"></i></span>
-                                <span class="edu-mockup-tool"><i class="bi bi-people"></i></span>
-                                <span class="edu-mockup-tool"><i class="bi bi-telephone-x text-danger"></i></span>
-                            </div>
-                        </div>
+                        <img src="{{ asset('images/img.jpg') }}"
+                             alt="{{ __('Preview of a live class') }}"
+                             class="img-fluid rounded-3 w-100"
+                             style="object-fit: cover; max-height: 420px;">
                     </div>
                 </div>
             </div>
@@ -237,7 +212,7 @@
                             </span>
                             <blockquote class="mb-3">
                                 <p class="h5 fw-semibold mb-0" id="quote-title">
-                                    {{ __('“My students join from their phones, ask questions in the feed and never lose the thread between lessons.”') }}
+                                    {{ __('â€œMy students join from their phones, ask questions in the feed and never lose the thread between lessons.â€') }}
                                 </p>
                             </blockquote>
                             <figcaption class="small text-muted">
@@ -265,7 +240,7 @@
                             @foreach ([
                                 [__('Do I need to install anything?'), __('No. EduConnect runs in your browser. The video room opens in the same tab and works on phones, tablets and computers.')],
                                 [__('Is it free for students?'), __('Creating a Student account is free. Your school or teacher decides which classes are published.')],
-                                [__('How do teachers start a class?'), __('A teacher schedules a class, opens the room when ready and presses “Start class”. Enrolled students then see the Join button.')],
+                                [__('How do teachers start a class?'), __('A teacher schedules a class, opens the room when ready and presses â€œStart classâ€. Enrolled students then see the Join button.')],
                                 [__('What happens if someone behaves badly?'), __('Any member can report a post or comment. Admins review reports, hide content and can block the account.')],
                                 [__('Can I use it on a slow connection?'), __('Yes. Pages are server-rendered, images are lazy-loaded and the video room degrades gracefully with a clear retry message.')],
                             ] as $index => [$question, $answer])

@@ -68,6 +68,21 @@
 
         return true;
     };
+
+    // Student ka course progress sidebar ke liye
+    $sidebarProgress = null;
+    if ($role === \App\Models\User::ROLE_STUDENT) {
+        $enrolled = \App\Models\ClassEnrollment::where('student_id', $me->id)
+            ->with('classRoom:id,status')
+            ->get();
+        $totalClasses  = $enrolled->count();
+        $doneClasses   = $enrolled->filter(fn ($e) => $e->classRoom?->status === \App\Models\ClassRoom::STATUS_COMPLETED)->count();
+        $sidebarProgress = [
+            'total'   => $totalClasses,
+            'done'    => $doneClasses,
+            'percent' => $totalClasses > 0 ? (int) round($doneClasses / $totalClasses * 100) : 0,
+        ];
+    }
 @endphp
 
 <aside class="offcanvas-lg offcanvas-start edu-sidebar flex-shrink-0" tabindex="-1" id="appSidebar"
@@ -121,6 +136,38 @@
                     @endforeach
                 </ul>
             @endforeach
+        {{-- Student: course-progress slider (shown only for student role) --}}
+        @if ($sidebarProgress !== null)
+            <div class="edu-sidebar-progress px-3 py-3">
+                <div class="edu-sidebar-divider mb-3"></div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="edu-sidebar-section mb-0" style="font-size:.65rem;">{{ __('Course Progress') }}</span>
+                    <span class="small fw-semibold" style="color:var(--edu-sidebar-text-muted, rgba(255,255,255,.55));">
+                        {{ $sidebarProgress['done'] }}/{{ $sidebarProgress['total'] }}
+                    </span>
+                </div>
+                <div class="progress" role="progressbar"
+                     aria-label="{{ __('Courses completed') }}"
+                     aria-valuenow="{{ $sidebarProgress['percent'] }}"
+                     aria-valuemin="0" aria-valuemax="100"
+                     style="height:6px; background:rgba(255,255,255,.12); border-radius:999px;">
+                    <div class="progress-bar"
+                         style="width:{{ $sidebarProgress['percent'] }}%; border-radius:999px;
+                                background: linear-gradient(90deg,#7c5cbf,#a78bfa);
+                                transition: width .4s ease;"></div>
+                </div>
+                <p class="mb-0 mt-1" style="font-size:.7rem; color:rgba(255,255,255,.45);">
+                    @if($sidebarProgress['total'] === 0)
+                        {{ __('Enroll in a class to track progress') }}
+                    @elseif($sidebarProgress['percent'] === 100)
+                        {{ __('All classes completed!') }} ??
+                    @else
+                        {{ $sidebarProgress['percent'] }}% {{ __('completed') }}
+                    @endif
+                </p>
+            </div>
+        @endif
+
         </nav>
 
         {{-- Account actions + mini profile card, pushed to the bottom --}}
@@ -157,20 +204,6 @@
                 </li>
             </ul>
 
-            {{-- User mini-card. --}}
-            <div class="edu-sidebar-user d-flex align-items-center gap-2 mt-2">
-                <x-avatar :user="$me" size="sm" class="flex-shrink-0" />
-                <div class="edu-sidebar-user-text min-w-0">
-                    <div class="edu-sidebar-user-name text-truncate">{{ $me->name }}</div>
-                    <div class="edu-sidebar-user-role">{{ $role }}</div>
-                </div>
-                <a class="btn edu-icon-btn ms-auto d-none d-lg-inline-flex"
-                   href="{{ route('profile.edit') }}"
-                   aria-label="{{ __('Edit profile') }}" title="{{ __('Edit profile') }}"
-                   style="color: var(--edu-sidebar-text); width: 34px; height: 34px;">
-                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                </a>
-            </div>
         </div>
     </div>
 </aside>

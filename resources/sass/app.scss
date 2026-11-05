@@ -582,7 +582,19 @@ button:focus-visible,
 // for the decorative ::before layer. On phones it is already fixed.
 @media (min-width: 992px) {
     .edu-sidebar {
-        position: relative;
+        // Fixed to the viewport — independent of the main page scroll
+        position: sticky;
+        top: var(--edu-navbar-height);
+        height: calc(100vh - var(--edu-navbar-height));
+        height: calc(100dvh - var(--edu-navbar-height));
+        overflow: hidden; // clip the decorative ::before, actual scroll on offcanvas-body
+        align-self: flex-start; // prevent sidebar from stretching the page height
+    }
+
+    .edu-sidebar .offcanvas-body {
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: 100%;
     }
 }
 
@@ -764,6 +776,7 @@ button:focus-visible,
 .edu-sidebar-user .avatar-sm {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
 
 // The offcanvas header on phones must match the dark column.
 .edu-sidebar .offcanvas-header {
