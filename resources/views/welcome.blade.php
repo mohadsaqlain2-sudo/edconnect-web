@@ -290,33 +290,5 @@
                 </div>
             </div>
         </section>
-
-        {{-- ------------------------------------------------------------------
-             Final call to action
-             ------------------------------------------------------------------ --}}
-        <section class="pb-5" aria-labelledby="cta-title">
-            <div class="container-xxl px-3 px-lg-4">
-                <div class="edu-stats-strip text-center">
-                    <h2 class="h3 fw-bold mb-2" id="cta-title">{{ __('Ready to start your first class?') }}</h2>
-                    <p class="text-white-50 mb-4 mx-auto edu-measure">
-                        {{ __('Join as a student to learn, or as a teacher to share what you know.') }}
-                    </p>
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-                        <a href="{{ route('register', ['role' => 'student']) }}" class="btn btn-light btn-lg">
-                            <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
-                            {{ __('Register as Student') }}
-                        </a>
-                        <a href="{{ route('register', ['role' => 'teacher']) }}" class="btn btn-outline-light btn-lg">
-                            <i class="bi bi-easel me-1" aria-hidden="true"></i>
-                            {{ __('Register as Teacher') }}
-                        </a>
-                    </div>
-                    <p class="small text-white-50 mt-3 mb-0">
-                        {{ __('Already have an account?') }}
-                        <a href="{{ route('login') }}" class="link-light fw-semibold">{{ __('Log in') }}</a>
-                    </p>
-                </div>
-            </div>
-        </section>
     </div>
 </x-app-layout>

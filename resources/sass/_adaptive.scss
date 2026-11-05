@@ -39,6 +39,11 @@ html {
     // A browser at 200% zoom behaves like a narrower viewport; keep the
     // sticky offsets in sync with the smaller navbar.
     scroll-padding-top: calc(var(--edu-navbar-height) + var(--edu-space-3));
+    // Blend the document scrollbar into the page. Without this the OS paints
+    // its own strip in the gutter (a 15px dark rail, or a 2px idle line with
+    // Windows 11 overlay scrollbars), which reads as extra space on the right.
+    // Only the colours change; the width is left to the browser.
+    scrollbar-color: rgba(148, 163, 184, 0.45) var(--edu-page-bg);
 }
 
 body {
