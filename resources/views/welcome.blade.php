@@ -11,7 +11,7 @@
             <span class="edu-landing-shape is-two" aria-hidden="true"></span>
 
             <div class="container-xxl px-3 px-lg-4 position-relative">
-                <div class="row align-items-start g-4 g-lg-5 pt-2">
+                <div class="row align-items-center g-5">
                     <div class="col-12 col-lg-6">
                         <span class="edu-eyebrow mb-3">
                             <i class="bi bi-stars" aria-hidden="true"></i>
@@ -46,9 +46,35 @@
                     </div>
 
                     <div class="col-12 col-lg-6">
-                        <img src="{{ asset('images/img.jpg') }}"
-                             alt="{{ __('EduConnect – live online classes') }}"
-                             class="img-fluid rounded-4 w-100 shadow-lg">
+                        {{-- CSS-only mockup of a live class: no image request, no layout shift. --}}
+                        <div class="edu-mockup" role="img"
+                             aria-label="{{ __('Preview of a live class: teacher video, shared notes and participant tiles.') }}">
+                            <div class="edu-mockup-bar" aria-hidden="true">
+                                <span class="edu-mockup-dot"></span>
+                                <span class="edu-mockup-dot"></span>
+                                <span class="edu-mockup-dot"></span>
+                                <span class="ms-auto small text-muted fw-semibold">{{ __('Algebra basics · Live') }}</span>
+                            </div>
+
+                            <div class="edu-mockup-stage">
+                                <span class="edu-mockup-tile" style="left: 6%; top: 8%; width: 58%; height: 58%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="right: 6%; top: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="right: 6%; bottom: 8%; width: 28%; height: 26%;" aria-hidden="true"></span>
+                                <span class="edu-mockup-tile" style="left: 6%; bottom: 8%; width: 58%; height: 20%;" aria-hidden="true"></span>
+
+                                <span class="position-absolute top-0 start-0 m-3 badge text-bg-danger">
+                                    <i class="bi bi-broadcast me-1" aria-hidden="true"></i>{{ __('Live') }}
+                                </span>
+                            </div>
+
+                            <div class="edu-mockup-bar-strip" aria-hidden="true">
+                                <span class="edu-mockup-tool"><i class="bi bi-mic"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-camera-video"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-chat-dots"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-people"></i></span>
+                                <span class="edu-mockup-tool"><i class="bi bi-telephone-x text-danger"></i></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -268,5 +294,29 @@
         {{-- ------------------------------------------------------------------
              Final call to action
              ------------------------------------------------------------------ --}}
+        <section class="pb-5" aria-labelledby="cta-title">
+            <div class="container-xxl px-3 px-lg-4">
+                <div class="edu-stats-strip text-center">
+                    <h2 class="h3 fw-bold mb-2" id="cta-title">{{ __('Ready to start your first class?') }}</h2>
+                    <p class="text-white-50 mb-4 mx-auto edu-measure">
+                        {{ __('Join as a student to learn, or as a teacher to share what you know.') }}
+                    </p>
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                        <a href="{{ route('register', ['role' => 'student']) }}" class="btn btn-light btn-lg">
+                            <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
+                            {{ __('Register as Student') }}
+                        </a>
+                        <a href="{{ route('register', ['role' => 'teacher']) }}" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-easel me-1" aria-hidden="true"></i>
+                            {{ __('Register as Teacher') }}
+                        </a>
+                    </div>
+                    <p class="small text-white-50 mt-3 mb-0">
+                        {{ __('Already have an account?') }}
+                        <a href="{{ route('login') }}" class="link-light fw-semibold">{{ __('Log in') }}</a>
+                    </p>
+                </div>
+            </div>
+        </section>
     </div>
 </x-app-layout>
