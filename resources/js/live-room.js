@@ -171,32 +171,40 @@ class LiveRoom {
 
     /**
      * Grab the devices, degrading gracefully. The camera and the microphone
-     * are requested separately: a denied (or missing) microphone must never
-     * take the camera down with it, and the other way round. The session stays
-     * usable when one of the two devices is unavailable.
+     * are opened one after the other, never at the same time: a second
+     * getUserMedia() that starts while the first request is still opening a
+     * device is aborted by several browsers (AbortError / NotReadableError),
+     * which used to drop the audio track and leave the room with video but no
+     * sound. Keeping the requests in sequence still lets a denied camera or
+     * microphone leave the other device working.
      */
     async acquireLocalStream() {
         if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error('getUserMedia is not available');
         }
 
-        const [video, audio] = await Promise.allSettled([
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false }),
-            navigator.mediaDevices.getUserMedia({ video: false, audio: true }),
-        ]);
-
         const stream = new MediaStream();
+        let lastError = null;
 
-        if (video.status === 'fulfilled') {
-            video.value.getVideoTracks().forEach((track) => stream.addTrack(track));
-        }
+        const requests = [
+            { video: true, audio: false },
+            { video: false, audio: true },
+        ];
 
-        if (audio.status === 'fulfilled') {
-            audio.value.getAudioTracks().forEach((track) => stream.addTrack(track));
+        for (const constraints of requests) {
+            try {
+                // Awaited on its own: the next device is only requested once
+                // this one has finished opening.
+                const device = await navigator.mediaDevices.getUserMedia(constraints);
+                device.getTracks().forEach((track) => stream.addTrack(track));
+            } catch (error) {
+                // One denied device must never stop the other one.
+                lastError = error;
+            }
         }
 
         if (stream.getTracks().length === 0) {
-            throw video.reason || audio.reason || new Error('No media device is available');
+            throw lastError || new Error('No media device is available');
         }
 
         return stream;

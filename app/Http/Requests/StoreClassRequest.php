@@ -3,13 +3,13 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Carbon;
-use Illuminate\Validation\Validator;
 
 /**
  * Validation for creating a live class (FR-15).
- * A new class must be in the future - a teacher cannot schedule a lesson
- * in the past by accident.
+ * A class may be planned for today or any later day, at any time of that day:
+ * the teacher starts it manually whenever they are ready, so a start time that
+ * has already passed today must never block the form (the teacher would be
+ * pushed to tomorrow for no reason). Only whole days in the past are refused.
  */
 class StoreClassRequest extends FormRequest
 {
@@ -50,25 +50,6 @@ class StoreClassRequest extends FormRequest
     }
 
     /**
-     * Reject a class that would start in the past (FR-15).
-     */
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $validator): void {
-            // Only check the date/time combination when both parts are valid.
-            if ($validator->errors()->has('date') || $validator->errors()->has('time')) {
-                return;
-            }
-
-            $startsAt = $this->startsAt();
-
-            if ($startsAt !== null && $startsAt->isPast()) {
-                $validator->errors()->add('time', __('A new class has to start in the future.'));
-            }
-        });
-    }
-
-    /**
      * @return array<string, string>
      */
     public function messages(): array
@@ -80,20 +61,5 @@ class StoreClassRequest extends FormRequest
             'duration.min' => __('A class lasts at least 15 minutes.'),
             'duration.max' => __('A class lasts at most 4 hours.'),
         ];
-    }
-
-    /**
-     * The start moment, or null when the input cannot be understood.
-     */
-    private function startsAt(): ?Carbon
-    {
-        try {
-            return Carbon::createFromFormat(
-                'Y-m-d H:i',
-                $this->input('date').' '.$this->input('time')
-            );
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

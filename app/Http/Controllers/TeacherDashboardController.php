@@ -45,10 +45,16 @@ class TeacherDashboardController extends Controller
             ->first();
 
         if (! $nextClass) {
+            // The soonest class that is still only scheduled - with no "is it
+            // in the future?" filter. A class whose slot has already passed
+            // today is exactly the one the teacher wants to start now, so it
+            // must keep its hero and its Start button (FR-21).
             $nextClass = (clone $mine)
-                ->upcoming()
+                ->where('status', ClassRoom::STATUS_SCHEDULED)
                 ->withCount('students')
                 ->with(['students' => fn ($query) => $query->orderBy('name')->limit(6)])
+                ->orderBy('date')
+                ->orderBy('time')
                 ->first();
         }
 

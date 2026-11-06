@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\ClassRoom;
 use App\Models\User;
+use App\Notifications\ClassStarted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -83,37 +85,53 @@ class ClassTest extends TestCase
     }
 
     /**
-     * A new class must start in the future (FR-18).
+     * A class can be planned for today at any time, even a time that already
+     * passed: the teacher starts it by hand whenever they are ready, so the
+     * schedule must never push them to tomorrow. Only a whole day in the past
+     * is refused (FR-18).
      */
-    public function test_a_class_cannot_be_created_in_the_past(): void
+    public function test_a_class_can_be_planned_for_today_at_any_time_but_not_in_a_past_day(): void
     {
         $this->travelTo(Carbon::parse('2026-06-15 12:00:00'));
 
         $teacher = User::factory()->teacher()->create();
 
-        $payload = [
-            'title' => 'Too late',
-            'date' => '2026-06-15',
-            'time' => '11:00',      // one hour before "now"
-            'duration' => 60,
-        ];
-
-        // Time already passed today.
+        // A time that already passed today is accepted.
         $this->actingAs($teacher)
-            ->post(route('classes.store'), $payload)
-            ->assertSessionHasErrors('time');
+            ->post(route('classes.store'), [
+                'title' => 'Same day, earlier time',
+                'date' => '2026-06-15',
+                'time' => '11:00',      // one hour before "now"
+                'duration' => 60,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $created = ClassRoom::where('title', 'Same day, earlier time')->firstOrFail();
+
+        $this->assertSame('2026-06-15', $created->date->format('Y-m-d'));
+        $this->assertStringStartsWith('11:00', (string) $created->time);
 
         // A whole day in the past is refused by the date rule.
         $this->actingAs($teacher)
-            ->post(route('classes.store'), ['date' => '2026-06-14'] + $payload)
+            ->post(route('classes.store'), [
+                'title' => 'Yesterday',
+                'date' => '2026-06-14',
+                'time' => '11:00',
+                'duration' => 60,
+            ])
             ->assertSessionHasErrors('date');
 
         // Missing title / bad duration are refused too.
         $this->actingAs($teacher)
-            ->post(route('classes.store'), ['title' => '', 'duration' => 1] + $payload)
+            ->post(route('classes.store'), [
+                'title' => '',
+                'date' => '2026-06-15',
+                'time' => '11:00',
+                'duration' => 1,
+            ])
             ->assertSessionHasErrors(['title', 'duration']);
 
-        $this->assertDatabaseCount('classes', 0);
+        $this->assertDatabaseCount('classes', 1);
     }
 
     /**
@@ -426,6 +444,229 @@ class ClassTest extends TestCase
             ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_COMPLETED])
             ->assertRedirect();
         $this->assertSame(ClassRoom::STATUS_COMPLETED, $classRoom->refresh()->status);
+    }
+
+    /* -----------------------------------------------------------------
+     | Scheduling and starting (FR-18, FR-21)
+     * ----------------------------------------------------------------- */
+
+    /**
+     * Scenario 1: a class can be planned for the current date.
+     */
+    public function test_a_teacher_can_schedule_a_class_for_today(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 08:30:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        $this->actingAs($teacher)
+            ->post(route('classes.store'), [
+                'title' => 'Today lesson',
+                'date' => '2026-06-15',
+                'time' => '09:00',
+                'duration' => 60,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('classes', [
+            'title' => 'Today lesson',
+            'status' => ClassRoom::STATUS_SCHEDULED,
+        ]);
+    }
+
+    /**
+     * Scenario 4: a class can still be planned for tomorrow.
+     */
+    public function test_a_teacher_can_schedule_a_class_for_tomorrow(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 08:30:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        $this->actingAs($teacher)
+            ->post(route('classes.store'), [
+                'title' => 'Tomorrow lesson',
+                'date' => '2026-06-16',
+                'time' => '09:00',
+                'duration' => 60,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('classes', [
+            'title' => 'Tomorrow lesson',
+            'status' => ClassRoom::STATUS_SCHEDULED,
+        ]);
+    }
+
+    /**
+     * Scenarios 2 and 3: the teacher starts a class immediately, even long
+     * before the slot it was planned for. The planned slot stays untouched.
+     */
+    public function test_the_teacher_can_start_a_class_before_its_planned_time(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 09:00:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        // Planned for tonight, but the teacher starts it right now, in the
+        // morning.
+        $classRoom = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'date' => '2026-06-15',
+            'time' => '20:00',
+        ]);
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertRedirect();
+
+        $classRoom->refresh();
+
+        $this->assertSame(ClassRoom::STATUS_LIVE, $classRoom->status);
+
+        // The originally planned date + time are preserved.
+        $this->assertSame('2026-06-15', $classRoom->date->format('Y-m-d'));
+        $this->assertStringStartsWith('20:00', (string) $classRoom->time);
+    }
+
+    /**
+     * Scenarios 7, 11 and 12: going live writes the real start moment to the
+     * database, keeps the planned slot, and is stored as "live".
+     */
+    public function test_starting_a_class_stamps_the_actual_start_and_keeps_the_planned_slot(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 09:00:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        $classRoom = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'date' => '2026-06-20',
+            'time' => '20:00',
+        ]);
+
+        $this->assertNull($classRoom->started_at);
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertRedirect();
+
+        $classRoom->refresh();
+
+        $this->assertSame(ClassRoom::STATUS_LIVE, $classRoom->status);
+        $this->assertNotNull($classRoom->started_at);
+        $this->assertTrue($classRoom->started_at->equalTo(Carbon::parse('2026-06-15 09:00:00')));
+
+        // Requirement 12: the planned slot is stored separately from started_at.
+        $this->assertSame('2026-06-20', $classRoom->date->format('Y-m-d'));
+        $this->assertStringStartsWith('20:00', (string) $classRoom->time);
+    }
+
+    /**
+     * Scenario 8: the class information is still there after a refresh.
+     */
+    public function test_class_information_survives_a_refresh_after_starting(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-15 09:00:00'));
+
+        $teacher = User::factory()->teacher()->create();
+
+        $classRoom = ClassRoom::factory()->scheduled()->create([
+            'teacher_id' => $teacher->id,
+            'title' => 'Persistent lesson',
+            'date' => '2026-06-15',
+            'time' => '08:00',
+        ]);
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertRedirect();
+
+        // A fresh read from the database, exactly like a page refresh.
+        $fresh = ClassRoom::findOrFail($classRoom->id);
+
+        $this->assertSame(ClassRoom::STATUS_LIVE, $fresh->status);
+        $this->assertSame('Persistent lesson', $fresh->title);
+        $this->assertNotNull($fresh->started_at);
+
+        // The teacher dashboard still shows the running class.
+        $this->actingAs($teacher)
+            ->get(route('teacher.dashboard'))
+            ->assertOk()
+            ->assertSee('Persistent lesson');
+    }
+
+    /**
+     * Scenario 5: starting a class notifies every enrolled student at once.
+     * Blocked accounts receive nothing.
+     */
+    public function test_starting_a_class_notifies_every_enrolled_student(): void
+    {
+        Notification::fake();
+
+        $teacher = User::factory()->teacher()->create();
+        $classRoom = ClassRoom::factory()->scheduled()->create(['teacher_id' => $teacher->id]);
+
+        $enrolled = User::factory()->student()->create();
+        $blocked = User::factory()->student()->blocked()->create();
+        $stranger = User::factory()->student()->create();
+
+        $classRoom->students()->attach([$enrolled->id, $blocked->id]);
+
+        Notification::assertNothingSent();
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertRedirect();
+
+        Notification::assertSentTo($enrolled, ClassStarted::class);
+        Notification::assertNotSentTo($blocked, ClassStarted::class);
+        Notification::assertNotSentTo($stranger, ClassStarted::class);
+    }
+
+    /**
+     * Scenario 9: the teacher ends the class and the new status is saved.
+     */
+    public function test_the_teacher_can_end_the_class_and_the_status_is_saved(): void
+    {
+        $teacher = User::factory()->teacher()->create();
+        $classRoom = ClassRoom::factory()->live()->create(['teacher_id' => $teacher->id]);
+
+        $this->actingAs($teacher)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_COMPLETED])
+            ->assertRedirect();
+
+        $this->assertSame(
+            ClassRoom::STATUS_COMPLETED,
+            ClassRoom::findOrFail($classRoom->id)->status
+        );
+    }
+
+    /**
+     * Scenario 10: a class can only be started by its owner. Another teacher
+     * and an enrolled student are both refused.
+     */
+    public function test_another_teacher_cannot_start_a_class_they_do_not_own(): void
+    {
+        $owner = User::factory()->teacher()->create();
+        $other = User::factory()->teacher()->create();
+        $student = User::factory()->student()->create();
+
+        $classRoom = ClassRoom::factory()->scheduled()->create(['teacher_id' => $owner->id]);
+        $classRoom->students()->attach($student->id);
+
+        $this->actingAs($other)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertForbidden();
+
+        $this->actingAs($student)
+            ->patch(route('classes.status', $classRoom), ['status' => ClassRoom::STATUS_LIVE])
+            ->assertForbidden();
+
+        // Nothing changed.
+        $classRoom->refresh();
+        $this->assertSame(ClassRoom::STATUS_SCHEDULED, $classRoom->status);
+        $this->assertNull($classRoom->started_at);
     }
 
     /**

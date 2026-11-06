@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ClassRoom;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * FR-21: close a running class automatically.
@@ -31,17 +32,25 @@ class CompleteFinishedClasses extends Command
     public function handle(): int
     {
         // Cheap pre-filter: a class starting tomorrow cannot have ended yet.
-        // The exact moment is then compared in PHP, which behaves the same on
+        // A class that was started today has to be considered too, even when
+        // its planned slot belongs to another day (the teacher may start
+        // early), so the actual start date is part of the filter as well. The
+        // exact moment is then compared in PHP, which behaves the same on
         // MySQL and on the SQLite database used by the tests.
         $candidates = ClassRoom::query()
             ->where('status', ClassRoom::STATUS_LIVE)
-            ->whereDate('date', '<=', now()->toDateString())
+            ->where(function (Builder $query): void {
+                $query->whereDate('date', '<=', now()->toDateString())
+                    ->orWhereDate('started_at', '<=', now()->toDateString());
+            })
             ->get();
 
         $completed = 0;
 
         foreach ($candidates as $classRoom) {
-            if ($classRoom->endsAt()->isFuture()) {
+            // The full duration counts from the real start, so a class the
+            // teacher started late stays live instead of being closed at once.
+            if ($classRoom->finishedAt()->isFuture()) {
                 continue;   // still running
             }
 

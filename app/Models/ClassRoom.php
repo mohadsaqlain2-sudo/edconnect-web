@@ -67,6 +67,9 @@ class ClassRoom extends Model
         'duration',
         'room_name',
         'status',
+        // The moment the teacher actually started the class, next to the
+        // planned date + time (they are never overwritten).
+        'started_at',
         'is_hidden',
         // Set by classes:notify-starting-soon (FR-23).
         'starting_soon_notified_at',
@@ -78,6 +81,7 @@ class ClassRoom extends Model
             'date' => 'date',
             'duration' => 'integer',
             'is_hidden' => 'boolean',
+            'started_at' => 'datetime',
             'starting_soon_notified_at' => 'datetime',
         ];
     }
@@ -196,6 +200,21 @@ class ClassRoom extends Model
     public function endsAt(): Carbon
     {
         return $this->startsAt()->addMinutes((int) $this->duration);
+    }
+
+    /**
+     * When the class really finishes: the actual start (if the teacher already
+     * pressed "Start class") plus the duration. Starting late must not make the
+     * class look finished, so the auto-complete command uses this instead of
+     * the planned slot in endsAt().
+     */
+    public function finishedAt(): Carbon
+    {
+        $start = $this->started_at instanceof \DateTimeInterface
+            ? Carbon::instance($this->started_at)
+            : $this->startsAt();
+
+        return $start->copy()->addMinutes((int) $this->duration);
     }
 
     /**
