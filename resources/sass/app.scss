@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // EduConnect stylesheet (Phase 3B premium dashboard design)
 // -----------------------------------------------------------------------------
 // Bootstrap 5 and Bootstrap Icons are pulled straight from node_modules and
@@ -2844,6 +2844,296 @@ button:focus-visible,
     }
 }
 
+// -----------------------------------------------------------------------------
+// Design refresh — depth, gradients and button motion
+// -----------------------------------------------------------------------------
+// Purely additive. No markup and no behaviour change: buttons simply gain a
+// gradient, a hover lift, a light "sweep" and a satisfying press, and the page
+// picks up a little ambient depth. Everything reads from the tokens above, so
+// light and dark mode stay in sync automatically.
+
+// --- Buttons: shared motion --------------------------------------------------
+// Note: no `overflow: hidden` here on purpose. The notification bell wraps a
+// badge that deliberately spills outside the button, and clipping the base
+// class would cut it off. Only the buttons that actually run the sweep clip.
+.btn {
+    position: relative;
+    transition: transform var(--edu-duration-2) var(--edu-ease),
+        box-shadow var(--edu-duration-2) var(--edu-ease),
+        background-position var(--edu-duration-3) var(--edu-ease),
+        background-color var(--edu-duration-1) ease,
+        border-color var(--edu-duration-1) ease,
+        color var(--edu-duration-1) ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+// --- Solid primary: animated gradient + gloss sweep --------------------------
+.btn-primary {
+    overflow: hidden;
+    isolation: isolate;
+    --bs-btn-bg: transparent;
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-active-bg: transparent;
+    --bs-btn-border-color: transparent;
+    --bs-btn-hover-border-color: transparent;
+    --bs-btn-active-border-color: transparent;
+    background-color: transparent;
+    background-image: var(--edu-gradient-brand);
+    background-size: 180% 180%;
+    background-position: 0% 50%;
+    background-repeat: no-repeat;
+    color: #fff;
+    box-shadow: var(--edu-shadow-btn);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+    background-position: 100% 50%;
+    color: #fff;
+    box-shadow: var(--edu-shadow-btn-hover);
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+    background-image: none;
+    background-color: #a5b4fc;
+    box-shadow: none;
+}
+
+// The moving highlight sits above the gradient but below nothing else, so the
+// label stays perfectly readable while the light passes over it.
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 28%, rgba(255, 255, 255, 0.38) 50%, transparent 72%);
+    transform: translateX(-130%);
+    transition: transform var(--edu-duration-3) var(--edu-ease);
+    pointer-events: none;
+}
+
+.btn-primary:hover::before,
+.btn-primary:focus-visible::before {
+    transform: translateX(130%);
+}
+
+// Never fight with the loading spinner (which owns ::after).
+.btn.is-loading::before {
+    display: none !important;
+}
+
+// --- Outline buttons: colour sweep fills from the left -----------------------
+.btn-outline-primary,
+.btn-outline-secondary {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background-color: transparent;
+}
+
+.btn-outline-primary {
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-hover-border-color: var(--edu-primary);
+    --bs-btn-hover-color: #fff;
+}
+
+.btn-outline-secondary {
+    --bs-btn-hover-bg: transparent;
+    --bs-btn-hover-border-color: var(--edu-secondary);
+    --bs-btn-hover-color: #fff;
+}
+
+.btn-outline-primary::before,
+.btn-outline-secondary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--edu-duration-2) var(--edu-ease);
+    pointer-events: none;
+}
+
+.btn-outline-primary::before {
+    background: var(--edu-primary);
+}
+
+.btn-outline-secondary::before {
+    background: var(--edu-secondary);
+}
+
+.btn-outline-primary:hover::before,
+.btn-outline-primary:focus-visible::before,
+.btn-outline-secondary:hover::before,
+.btn-outline-secondary:focus-visible::before {
+    transform: scaleX(1);
+}
+
+// --- Forms: gentle interaction feedback --------------------------------------
+.form-control,
+.form-select {
+    transition: border-color var(--edu-duration-1) ease, box-shadow var(--edu-duration-1) ease,
+        background-color var(--edu-duration-1) ease;
+}
+
+.form-control:hover:not(:focus),
+.form-select:hover:not(:focus) {
+    border-color: var(--edu-border-strong);
+}
+
+// --- Small accents -----------------------------------------------------------
+// Eyebrow pills pick up the soft brand gradient instead of a flat tint.
+.edu-eyebrow {
+    background: var(--edu-gradient-soft);
+    border: 1px solid rgba(79, 70, 229, 0.18);
+}
+
+// Content links gain a colour-underlined, animated hover.
+.edu-page a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.stretched-link) {
+    text-decoration-color: rgba(79, 70, 229, 0.35);
+    text-underline-offset: 3px;
+    transition: color var(--edu-duration-1) ease, text-decoration-color var(--edu-duration-1) ease;
+}
+
+.edu-page a:not(.btn):not(.nav-link):not(.dropdown-item):not(.page-link):not(.stretched-link):hover {
+    text-decoration-color: currentColor;
+}
+
+// -----------------------------------------------------------------------------
+// Lighting & glow — ambient light, button halos and colour depth
+// -----------------------------------------------------------------------------
+// Still purely additive: this layer only adds light. The page gains soft
+// coloured "lamps", and every solid button carries a halo in its own brand
+// colour, so the interface reads as lit rather than flat. No markup changes.
+
+// --- Ambient page light ------------------------------------------------------
+// Indigo top-left, violet top-right, sky from the bottom. Fixed so the lamps
+// stay in place while the page scrolls.
+body {
+    background-image:
+        radial-gradient(860px 480px at 14% -8%, rgba(99, 102, 241, 0.16), transparent 62%),
+        radial-gradient(720px 420px at 88% -6%, rgba(168, 85, 247, 0.14), transparent 64%),
+        radial-gradient(1100px 640px at 50% 108%, rgba(14, 165, 233, 0.1), transparent 66%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+[data-bs-theme='dark'] body {
+    background-image:
+        radial-gradient(860px 480px at 14% -8%, rgba(99, 102, 241, 0.3), transparent 62%),
+        radial-gradient(720px 420px at 88% -6%, rgba(168, 85, 247, 0.26), transparent 64%),
+        radial-gradient(1100px 640px at 50% 108%, rgba(14, 165, 233, 0.18), transparent 66%);
+}
+
+// --- Buttons: a coloured halo behind every solid button ----------------------
+// One small loop keeps every variant glowing in the right colour.
+$edu-btn-glows: (
+    primary: #6366f1,
+    secondary: #7c3aed,
+    success: #10b981,
+    info: #0ea5e9,
+    warning: #f59e0b,
+    danger: #ef4444,
+    dark: #475569,
+);
+
+@each $name, $glow in $edu-btn-glows {
+    .btn-#{$name}:not(:disabled):not(.disabled) {
+        box-shadow: 0 8px 20px -14px rgba($glow, 0.55), 0 0 22px -14px rgba($glow, 0.65);
+    }
+
+    .btn-#{$name}:not(:disabled):not(.disabled):hover,
+    .btn-#{$name}:not(:disabled):not(.disabled):focus-visible {
+        box-shadow: 0 16px 32px -16px rgba($glow, 0.6), 0 0 34px -10px rgba($glow, 0.75);
+    }
+}
+
+// Outline buttons get the softer version of the same halo on hover.
+.btn-outline-primary:not(:disabled):hover,
+.btn-outline-primary:not(:disabled):focus-visible {
+    box-shadow: 0 0 24px -10px rgba(99, 102, 241, 0.7);
+}
+
+.btn-outline-secondary:not(:disabled):hover,
+.btn-outline-secondary:not(:disabled):focus-visible {
+    box-shadow: 0 0 24px -10px rgba(124, 58, 237, 0.7);
+}
+
+// --- Icon buttons: a quiet light on hover ------------------------------------
+.edu-icon-btn:hover,
+.edu-icon-btn:focus-visible {
+    box-shadow: 0 0 0 1px var(--edu-border), 0 10px 22px -14px rgba(79, 70, 229, 0.5);
+}
+
+// --- Cards: warm up on hover -------------------------------------------------
+.edu-card:hover,
+.edu-stat-card:hover,
+.edu-chart-card:hover {
+    box-shadow: var(--edu-shadow-hover), 0 0 34px -16px rgba(99, 102, 241, 0.5);
+}
+
+// --- Stat cards: a corner light + a glowing icon tile ------------------------
+// `isolation` makes the card its own stacking context so the light layer can
+// sit safely behind the text without touching any markup.
+.edu-stat-card {
+    isolation: isolate;
+}
+
+.edu-stat-card::after {
+    content: '';
+    position: absolute;
+    top: -46px;
+    right: -46px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.18), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.edu-stat-icon {
+    box-shadow: 0 10px 22px -12px currentColor;
+}
+
+// --- Notification badge: a small red beacon ----------------------------------
+.badge.text-bg-danger {
+    box-shadow: 0 0 12px -3px rgba(239, 68, 68, 0.75);
+}
+
+// --- Top bar: a soft shadow plus a gradient hairline -------------------------
+.edu-navbar {
+    box-shadow: 0 8px 30px -22px rgba(79, 70, 229, 0.55);
+}
+
+.edu-navbar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.7), rgba(168, 85, 247, 0.7), transparent);
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+// --- Sidebar: add a third colour to the existing light -----------------------
+.edu-sidebar::before {
+    background:
+        radial-gradient(420px 260px at 10% -10%, rgba(124, 58, 237, 0.28), transparent 60%),
+        radial-gradient(360px 240px at 110% 20%, rgba(79, 70, 229, 0.22), transparent 60%),
+        radial-gradient(320px 320px at 50% 120%, rgba(14, 165, 233, 0.2), transparent 65%);
+}
+
 // Accessibility: honour the operating-system "reduce motion" setting. One
 // single media query for the whole stylesheet (Phase 3C merged the block that
 // used to be duplicated here).
@@ -2858,7 +3148,9 @@ button:focus-visible,
     }
 
     .edu-feature-card:hover,
-    .edu-card-hover:hover {
+    .edu-card-hover:hover,
+    .btn:hover,
+    .btn:active {
         transform: none;
     }
 
