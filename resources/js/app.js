@@ -31,8 +31,8 @@ import './auth';
 // Feed interactions: likes, comments, follows and "Load more" (FR-11, FR-13, FR-17).
 import './feed';
 
-// Live class room: embeds Jitsi Meet through the External API (FR-18, FR-22).
-import './jitsi';
+// Live class room: the app's own WebRTC room + signaling (FR-18, FR-22).
+import './live-room';
 
 // Notification bell: unread badge + newest eight, refreshed by polling (FR-24)
 // and "mark as read" without a reload (FR-25).

@@ -92,7 +92,7 @@ class PhaseThreeCTest extends TestCase
             ->assertSee(route('register', ['role' => 'teacher']), false)
             ->assertSee('Three steps to your first class')
             // The hero illustration is described for screen readers.
-            ->assertSee('aria-label="Preview of a live class', false);
+            ->assertSee('alt="Preview of a live class', false);
     }
 
     /* ---------------------------------------------------------------

@@ -1810,30 +1810,6 @@ button:focus-visible,
     display: none !important;
 }
 
-.jitsi-frame {
-    position: relative;
-    width: 100%;
-    height: calc(100vh - 340px);
-    min-height: 420px;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    background-color: #1c1c1c;
-}
-
-.jitsi-frame iframe {
-    width: 100% !important;
-    height: 100% !important;
-    border: 0;
-}
-
-@media (max-width: 991.98px) {
-    .jitsi-frame {
-        height: calc(100vh - 260px);
-        min-height: 360px;
-        border-radius: 0.5rem;
-    }
-}
-
 .edu-auth-body {
     background-color: var(--edu-surface);
     color: var(--edu-text);
@@ -3180,3 +3156,309 @@ $edu-btn-glows: (
 // RTL, forced colours, TV and slow-network behaviour. Must stay last.
 // -----------------------------------------------------------------------------
 @import 'adaptive';
+
+// -----------------------------------------------------------------------------
+// Live class room — the app's own WebRTC room (FR-18, FR-20, FR-22)
+// -----------------------------------------------------------------------------
+// The room page hosts a small video mesh: one tile per participant, a control
+// bar and an optional chat panel. It reuses the design tokens and the
+// glow / lighting language of the rest of the application.
+
+.edu-live-layout {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.edu-live-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+// --- Video grid --------------------------------------------------------------
+// One column on phones, two on small screens and an auto-fitting grid on the
+// larger ones. The tiles keep a 16 / 9 ratio everywhere.
+.edu-live-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+}
+
+@media (min-width: 576px) {
+    .edu-live-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .edu-live-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+}
+
+.edu-live-tile {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--edu-radius);
+    overflow: hidden;
+    background: #0b1220;
+    border: 1px solid var(--edu-border);
+    box-shadow: var(--edu-shadow-card);
+}
+
+.edu-live-tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #0b1220;
+}
+
+// My own camera is shown like a mirror.
+.edu-live-tile.is-local video {
+    transform: scaleX(-1);
+}
+
+// "Camera off" or "stream not here yet": hide the video, show the avatar.
+.edu-live-tile.is-cam-off video {
+    visibility: hidden;
+}
+
+.edu-live-avatar {
+    display: none;
+}
+
+.edu-live-tile.is-cam-off .edu-live-avatar {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    background: radial-gradient(120% 120% at 30% 0%, #4338ca 0%, #1e1b4b 60%, #0b1220 100%);
+}
+
+// The profile photo covers the initials once it loads; the initials stay as the
+// fallback while the participant has no photo (or it cannot be loaded).
+.edu-live-avatar-photo {
+    display: none;
+    width: 42%;
+    max-width: 140px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(248, 250, 252, 0.85);
+    box-shadow: 0 12px 30px -12px rgba(2, 6, 23, 0.9);
+}
+
+.edu-live-tile.is-cam-off .edu-live-avatar.has-photo .edu-live-avatar-photo {
+    display: block;
+}
+
+.edu-live-tile.is-cam-off .edu-live-avatar.has-photo .edu-live-avatar-initials {
+    display: none;
+}
+
+.edu-live-name {
+    position: absolute;
+    left: 0.55rem;
+    bottom: 0.5rem;
+    max-width: calc(100% - 1.1rem);
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.62);
+    color: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.edu-live-muted {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.9);
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+// "Click to play" fallback: shown over a tile when the browser refuses to
+// autoplay a remote (audio carrying) video.
+.edu-live-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 0;
+    background: rgba(2, 6, 23, 0.55);
+    color: #f8fafc;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.edu-live-play:hover,
+.edu-live-play:focus-visible {
+    background: rgba(2, 6, 23, 0.72);
+    outline: none;
+}
+
+// --- Control bar -------------------------------------------------------------
+.edu-live-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--edu-radius);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    box-shadow: var(--edu-shadow-card);
+}
+
+.edu-live-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface-muted);
+    color: var(--edu-text);
+    font-size: 1.1rem;
+    transition: background-color var(--edu-transition), color var(--edu-transition),
+        border-color var(--edu-transition), box-shadow var(--edu-transition),
+        transform var(--edu-transition);
+}
+
+.edu-live-btn:hover,
+.edu-live-btn:focus-visible {
+    background: var(--edu-surface-soft);
+    border-color: var(--edu-border-strong);
+    box-shadow: 0 0 0 1px var(--edu-border), 0 10px 22px -14px rgba(79, 70, 229, 0.5);
+}
+
+.edu-live-btn:active {
+    transform: translateY(1px);
+}
+
+// The "on" state of microphone / camera / screen / chat.
+.edu-live-btn.is-active {
+    background: var(--edu-primary);
+    border-color: var(--edu-primary);
+    color: #fff;
+    box-shadow: 0 0 22px -10px rgba(99, 102, 241, 0.8);
+}
+
+.edu-live-btn-danger {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+}
+
+.edu-live-btn-danger:hover,
+.edu-live-btn-danger:focus-visible {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+}
+
+.edu-live-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: var(--edu-surface-muted);
+    border: 1px solid var(--edu-border);
+    color: var(--edu-muted-strong);
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+// --- Chat panel --------------------------------------------------------------
+.edu-live-chat {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--edu-radius);
+    border: 1px solid var(--edu-border);
+    background: var(--edu-surface);
+    box-shadow: var(--edu-shadow-card);
+    overflow: hidden;
+}
+
+.edu-live-chat-head {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--edu-border);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--edu-text);
+}
+
+.edu-live-chat-list {
+    flex: 1 1 auto;
+    min-height: 180px;
+    max-height: 46vh;
+    overflow-y: auto;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.edu-live-msg {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.edu-live-msg-name {
+    font-weight: 700;
+    color: var(--edu-primary);
+}
+
+.edu-live-msg-text {
+    color: var(--edu-text);
+    word-break: break-word;
+}
+
+.edu-live-chat-form {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.6rem 0.8rem;
+    border-top: 1px solid var(--edu-border);
+}
+
+// Below lg the chat drops under the video instead of squeezing it.
+@media (max-width: 991.98px) {
+    .edu-live-layout {
+        flex-direction: column;
+    }
+
+    .edu-live-chat {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .edu-live-chat-list {
+        max-height: 40vh;
+    }
+}

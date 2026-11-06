@@ -22,34 +22,8 @@
     </x-slot>
 
     <div class="container-xxl px-3 px-lg-4">
-        <div class="row g-4">
-            {{-- In-page navigation --}}
-            <div class="col-12 col-lg-3">
-                <nav class="card edu-card edu-sticky-aside" aria-label="{{ __('Settings sections') }}">
-                    <div class="card-body py-3">
-                        <div class="edu-eyebrow mb-2">{{ __('On this page') }}</div>
-                        <ul class="nav flex-column gap-1 small">
-                            <li class="nav-item">
-                                <a class="nav-link py-1 px-2" href="#profile-information">
-                                    <i class="bi bi-person me-1" aria-hidden="true"></i>{{ __('Profile information') }}
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link py-1 px-2" href="#update-password">
-                                    <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>{{ __('Password') }}
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link py-1 px-2 text-danger" href="#delete-account">
-                                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>{{ __('Delete account') }}
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </nav>
-            </div>
-
-            <div class="col-12 col-lg-9">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
                 <div class="card edu-card mb-4" id="profile-information">
                     <div class="card-body p-3 p-md-4">
                         @include('profile.partials.update-profile-information-form')

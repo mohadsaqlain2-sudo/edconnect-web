@@ -81,5 +81,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('search-suggest', fn (Request $request) => Limit::perMinute(120)->by(
             $request->user()?->id ?: $request->ip()
         ));
+
+        // The live room polls every second, so this one is generous: it only
+        // stops a runaway tab, it never gets in the way of a real session.
+        RateLimiter::for('live-poll', fn (Request $request) => Limit::perMinute(240)->by(
+            $request->user()?->id ?: $request->ip()
+        ));
     }
 }

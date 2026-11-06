@@ -1,6 +1,6 @@
-{{-- The Join Class page: Jitsi Meet embedded through the External API (FR-18, FR-20, FR-22).
-     The script URL and the domain come from config/services.php, so a self hosted
-     Jitsi server only needs a change in .env (JITSI_DOMAIN).
+{{-- The Join Class page: the application's own WebRTC room (FR-18, FR-20, FR-22).
+     The browser captures the camera/microphone and resources/js/live-room.js
+     talks to our own signaling API; no external video server is loaded.
      Everything the JavaScript needs travels in data-* attributes: no inline script. --}}
 <x-app-layout>
     <x-slot name="title">{{ $classRoom->title }} · {{ __('Live room') }}</x-slot>
@@ -73,43 +73,99 @@
             </div>
         @endif
 
-        {{-- The Jitsi room ------------------------------------------------------------------
-             data-jitsi is picked up by resources/js/jitsi.js, which loads the
-             External API and asks it to build the iframe inside data-jitsi-container. --}}
-        <div id="edu-jitsi"
-             data-jitsi
-             data-domain="{{ $domain }}"
-             data-script-url="{{ $scriptUrl }}"
-             data-room="{{ $roomName }}"
-             data-display-name="{{ $displayName }}"
-             data-email="{{ $email }}"
-             data-avatar="{{ $avatarUrl }}"
-             data-subject="{{ $subject }}"
-             data-moderator="{{ $isModerator ? '1' : '0' }}"
+        {{-- The app's own WebRTC room --------------------------------------------------
+             data-live-room is picked up by resources/js/live-room.js, which asks for
+             the camera/microphone, joins through our own API (live.*) and renders one
+             tile per participant. Nothing is embedded from an external server. --}}
+        <div id="edu-live-room"
+             data-live-room
+             data-join-url="{{ route('live.join', $classRoom) }}"
+             data-heartbeat-url="{{ route('live.heartbeat', $classRoom) }}"
+             data-signals-url="{{ route('live.signals', $classRoom) }}"
+             data-signal-url="{{ route('live.signal', $classRoom) }}"
+             data-chat-url="{{ route('live.chat', $classRoom) }}"
+             data-leave-url="{{ route('live.leave', $classRoom) }}"
              data-dashboard-url="{{ route('dashboard') }}"
-             data-leave-url="{{ route('classes.leave', $classRoom) }}">
+             data-self-id="{{ auth()->id() }}"
+             data-moderator="{{ $isModerator ? '1' : '0' }}"
+             data-display-name="{{ $displayName }}"
+             data-avatar-url="{{ $avatarUrl }}"
+             data-ice="{{ json_encode($iceServers) }}">
 
-            {{-- Shown while the API and the room are loading --}}
-            <div class="alert bg-body-secondary text-body border d-flex align-items-center gap-2" data-jitsi-status>
+            {{-- Shown while the camera starts and the room is being joined --}}
+            <div class="alert bg-body-secondary text-body border d-flex align-items-center gap-2" data-live-status role="status">
                 <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
                 <span>{{ __('Connecting to the room...') }}</span>
             </div>
 
-            {{-- Shown when the External API cannot be loaded (offline, blocked, ...) --}}
-            <div class="alert alert-danger d-none" data-jitsi-error role="alert">
+            {{-- Shown when the camera/microphone is denied or the room cannot start --}}
+            <div class="alert alert-danger d-none" data-live-error role="alert">
                 <div class="fw-semibold mb-1">
-                    <i class="bi bi-wifi-off me-1" aria-hidden="true"></i> {{ __('The video room could not be loaded.') }}
+                    <i class="bi bi-camera-video-off me-1" aria-hidden="true"></i> {{ __('The video room could not be loaded.') }}
                 </div>
-                <p class="small mb-2">
-                    {{ __('Check your internet connection and try again. If you are on a school network, the video server might be blocked.') }}
+                <p class="small mb-2" data-live-error-text>
+                    {{ __('Allow the camera and the microphone in your browser, then try again.') }}
                 </p>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-jitsi-retry>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-live-retry>
                     <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i> {{ __('Try again') }}
                 </button>
             </div>
 
-            {{-- Jitsi builds the iframe in here --}}
-            <div class="jitsi-frame" data-jitsi-container></div>
+            <div class="edu-live-layout">
+                <div class="edu-live-main">
+                    {{-- One tile per participant is added here; the local one first --}}
+                    <div class="edu-live-grid" data-live-grid></div>
+
+                    {{-- Control bar: microphone, camera, screen share, chat, leave --}}
+                    <div class="edu-live-controls" role="toolbar" aria-label="{{ __('Room controls') }}">
+                        <button type="button" class="edu-live-btn" data-live-mic
+                                aria-label="{{ __('Toggle microphone') }}" title="{{ __('Toggle microphone') }}">
+                            <i class="bi bi-mic" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="edu-live-btn" data-live-camera
+                                aria-label="{{ __('Toggle camera') }}" title="{{ __('Toggle camera') }}">
+                            <i class="bi bi-camera-video" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="edu-live-btn" data-live-screen
+                                aria-label="{{ __('Share your screen') }}" title="{{ __('Share your screen') }}">
+                            <i class="bi bi-display" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="edu-live-btn" data-live-chat-toggle
+                                aria-label="{{ __('Show the chat') }}" title="{{ __('Show the chat') }}"
+                                aria-controls="edu-live-chat" aria-expanded="false">
+                            <i class="bi bi-chat-dots" aria-hidden="true"></i>
+                        </button>
+
+                        <span class="edu-live-count">
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <span data-live-count aria-live="polite">1</span>
+                        </span>
+
+                        <button type="button" class="edu-live-btn edu-live-btn-danger ms-auto" data-live-leave
+                                aria-label="{{ __('Leave the room') }}" title="{{ __('Leave the room') }}">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Chat side panel: messages arrive through the signals poll (FR-22) --}}
+                <aside class="edu-live-chat d-none" id="edu-live-chat" data-live-chat-panel
+                       aria-label="{{ __('Class chat') }}">
+                    <div class="edu-live-chat-head">
+                        <i class="bi bi-chat-dots me-1" aria-hidden="true"></i> {{ __('Class chat') }}
+                    </div>
+                    <div class="edu-live-chat-list" data-live-chat-list aria-live="polite"></div>
+                    <form class="edu-live-chat-form" data-live-chat-form>
+                        <input type="text" class="form-control form-control-sm" data-live-chat-input
+                               maxlength="500" autocomplete="off" placeholder="{{ __('Type a message...') }}"
+                               aria-label="{{ __('Type a message') }}">
+                        <button type="submit" class="btn btn-sm btn-primary"
+                                aria-label="{{ __('Send') }}" title="{{ __('Send') }}">
+                            <i class="bi bi-send" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                </aside>
+            </div>
         </div>
 
         {{-- Collapsible room info: moderation controls and help, out of the way.

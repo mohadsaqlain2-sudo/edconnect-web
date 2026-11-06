@@ -16,6 +16,7 @@ use App\Http\Controllers\FollowController;
 use App\Http\Controllers\HashtagController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\LiveClassController;
+use App\Http\Controllers\LiveRoomApiController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
@@ -227,16 +228,28 @@ Route::middleware(['auth', 'not.blocked', 'role:teacher'])->group(function () {
     Route::patch('/classes/{classRoom}/status', [ClassStatusController::class, 'update'])->name('classes.status');
 });
 
-// Every logged in role: the class detail page and the Jitsi room (FR-20).
+// Every logged in role: the class detail page and the live room (FR-20).
 Route::middleware(['auth', 'not.blocked'])->group(function () {
     // Find classes: search + subject filter + pagination (FR-19).
     Route::get('/classes/discover', [ClassBrowseController::class, 'index'])->name('classes.discover');
     Route::get('/classes/{classRoom}', [ClassBrowseController::class, 'show'])->name('classes.show');
 
-    // FR-18 / FR-20 / FR-22: the embedded Jitsi Meet room.
+    // FR-18 / FR-20 / FR-22: the app's own WebRTC room page.
     Route::get('/classes/{classRoom}/room', LiveClassController::class)->name('classes.room');
-    // Jitsi sends the user here after hangup so the flash survives the reload.
+    // Landing spot after the user hangs up, so the flash message survives.
     Route::get('/classes/{classRoom}/leave', [LiveClassController::class, 'leave'])->name('classes.leave');
+
+    // The signaling API of that room. Web routes (session + CSRF), JSON only.
+    // Every action re-checks ClassPolicy::join, exactly like the room page.
+    Route::prefix('live')->name('live.')->group(function () {
+        Route::post('/{classRoom}/join', [LiveRoomApiController::class, 'join'])->name('join');
+        Route::post('/{classRoom}/heartbeat', [LiveRoomApiController::class, 'heartbeat'])->name('heartbeat');
+        Route::get('/{classRoom}/signals', [LiveRoomApiController::class, 'signals'])
+            ->middleware('throttle:live-poll')->name('signals');
+        Route::post('/{classRoom}/signal', [LiveRoomApiController::class, 'signal'])->name('signal');
+        Route::post('/{classRoom}/chat', [LiveRoomApiController::class, 'chat'])->name('chat');
+        Route::post('/{classRoom}/leave', [LiveRoomApiController::class, 'leave'])->name('leave');
+    });
 });
 
 // Student only: enroll / unenroll and "my enrolled classes" (FR-21).

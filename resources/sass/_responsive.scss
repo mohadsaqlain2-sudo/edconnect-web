@@ -455,35 +455,11 @@ button:focus-visible,
 }
 
 // -----------------------------------------------------------------------------
-// 8. Live class room (Jitsi)
+// 8. Landscape phone adjustments
 // -----------------------------------------------------------------------------
 
-.jitsi-frame {
-    // 100vh first for older browsers, then the dynamic unit.
-    height: calc(100vh - 340px);
-    height: calc(100dvh - 340px);
-    min-height: 420px;
-}
-
-@media (max-width: 991.98px) {
-    .jitsi-frame {
-        height: calc(100vh - 260px);
-        height: calc(100dvh - 260px);
-        min-height: 360px;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .jitsi-frame {
-        height: calc(100vh - 250px);
-        height: calc(100dvh - 250px);
-        min-height: 320px;
-        border-radius: var(--edu-radius-sm);
-    }
-}
-
 // Landscape phone: the top bar + navbar leave roughly 260px of usable
-// height, so the video keeps the remaining space and never forces a scroll.
+// height, so the page keeps the remaining space and never forces a scroll.
 @media (orientation: landscape) and (max-height: 520px) {
     :root {
         --edu-navbar-height: 56px;
@@ -494,12 +470,6 @@ button:focus-visible,
         min-height: 56px;
         padding-top: 0.25rem;
         padding-bottom: 0.25rem;
-    }
-
-    .jitsi-frame {
-        height: calc(100vh - 150px);
-        height: calc(100dvh - 150px);
-        min-height: 220px;
     }
 
     .edu-mobile-nav {

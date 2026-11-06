@@ -328,7 +328,7 @@ class ClassTest extends TestCase
             ->get(route('classes.room', $scheduled))
             ->assertOk()
             ->assertSee('This class has not started yet')
-            ->assertDontSee('data-jitsi', false);
+            ->assertDontSee('data-live-room', false);
 
         // The teacher may open the room at any time.
         $this->actingAs($teacher)->get(route('classes.room', $scheduled))->assertOk();
@@ -342,9 +342,9 @@ class ClassTest extends TestCase
     }
 
     /**
-     * The room page embeds Jitsi with the room name and the user's details.
+     * The room page renders the app's own WebRTC room, not an embedded iframe.
      */
-    public function test_the_room_page_embeds_jitsi_with_the_user_details(): void
+    public function test_the_room_page_renders_the_apps_own_live_room(): void
     {
         $teacher = User::factory()->teacher()->create();
         $student = User::factory()->student()->create();
@@ -355,24 +355,22 @@ class ClassTest extends TestCase
         $response = $this->actingAs($student)->get(route('classes.room', $classRoom));
 
         $response->assertOk();
-        // The room name, the Jitsi domain and the retry button for a failed script.
-        $response->assertSee($classRoom->room_name);
-        $response->assertSee(config('services.jitsi.domain'));
-        $response->assertSee('data-jitsi', false);
-        $response->assertSee('data-jitsi-retry', false);
-        $response->assertSee($student->name);
-        $response->assertSee($student->email);
-        // The class title is the Jitsi subject and the user's avatar travels too.
-        $response->assertSee('data-subject="'.e($classRoom->title).'"', false);
-        $response->assertSee('data-avatar="'.e(url($student->photoUrl())).'"', false);
-        // The hangup redirect lands on the class page with a flash message.
-        $response->assertSee(route('classes.leave', $classRoom));
-        $response->assertSee(route('dashboard'));
+        // Our own room wrapper, its retry button and the class title.
+        $response->assertSee('data-live-room', false);
+        $response->assertSee('data-live-retry', false);
+        $response->assertSee($classRoom->title);
+        // The display name and the signaling URL the client posts to.
+        $response->assertSee('data-display-name="'.e($student->name).'"', false);
+        $response->assertSee(route('live.join', $classRoom), false);
+        $response->assertSee(route('dashboard'), false);
 
-        // The teacher is flagged as the moderator, the student is not.
-        $this->actingAs($teacher)
-            ->get(route('classes.room', $classRoom))
-            ->assertSee('Moderator');
+        // The teacher is flagged as the moderator, the student is not. Only the
+        // moderator sees the moderation card with the room name (FR-24).
+        $teacherPage = $this->actingAs($teacher)->get(route('classes.room', $classRoom));
+        $teacherPage->assertSee('Moderator');
+        $teacherPage->assertSee('data-moderator="1"', false);
+        $teacherPage->assertSee($classRoom->room_name);
+        $response->assertSee('data-moderator="0"', false);
     }
 
     /**

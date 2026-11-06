@@ -62,7 +62,7 @@ class PhaseEightTest extends TestCase
         $this->assertFalse($response->headers->has('X-Powered-By'));
     }
 
-    public function test_the_jitsi_room_relaxes_framing_for_the_video_domain(): void
+    public function test_the_own_live_room_allows_camera_and_microphone(): void
     {
         $teacher = User::factory()->teacher()->create();
         $student = User::factory()->student()->create();
@@ -73,20 +73,20 @@ class PhaseEightTest extends TestCase
 
         $response->assertOk();
 
-        // The page embeds Jitsi, so X-Frame-Options must not block it.
-        $response->assertHeaderMissing('X-Frame-Options');
+        // The room runs in our own origin, so framing stays locked down.
+        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
 
-        $csp = (string) $response->headers->get('Content-Security-Policy');
-        $this->assertStringContainsString('frame-src', $csp);
-        $this->assertStringContainsString('https://'.config('services.jitsi.domain'), $csp);
-
+        // WebRTC only needs the camera, the microphone and screen capture,
+        // and only on this origin.
         $permissions = (string) $response->headers->get('Permissions-Policy');
         $this->assertStringContainsString('camera=(self', $permissions);
         $this->assertStringContainsString('microphone=(self', $permissions);
+        $this->assertStringContainsString('display-capture=(self', $permissions);
 
         // The normal pages keep the strict default.
         $plain = $this->get('/');
         $plain->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $plain->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     }
 
     public function test_the_layout_ships_meta_social_and_favicon_tags(): void

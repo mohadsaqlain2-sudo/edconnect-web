@@ -1,4 +1,4 @@
-﻿<x-app-layout>
+<x-app-layout>
     <x-slot name="title">{{ __('Learn together, anywhere') }}</x-slot>
     <x-slot name="description">{{ __('EduConnect brings live video classes, a friendly social feed with posts and hashtags, and one-click class enrolment together for teachers and students.') }}</x-slot>
 
@@ -18,9 +18,12 @@
                             {{ __('A calmer way to teach online') }}
                         </span>
 
+                        <div class="text-edu fw-bold h2 mb-2">
+                            {{ __('together') }}
+                        </div>
+
                         <h1 class="edu-landing-title fw-bold mb-3" id="hero-title">
                             {{ __('Teach and learn,') }}
-                            <span class="text-edu">{{ __('together') }}</span>.
                         </h1>
 
                         <p class="lead text-muted mb-4 edu-measure">

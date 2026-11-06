@@ -327,16 +327,9 @@ function reflow(previous, next) {
         }
     });
 
-    // Jitsi: the iframe is 100% of .jitsi-frame, so clearing an inline height
-    // and notifying the room is enough for the new dvh calculation.
-    document.querySelectorAll('[data-jitsi]').forEach((wrapper) => {
-        const frameEl = wrapper.querySelector('.jitsi-frame');
-
-        if (frameEl) {
-            frameEl.style.removeProperty('height');
-            void frameEl.offsetHeight; // force the new viewport unit to resolve
-        }
-
+    // The live room re-reads the viewport (grid columns, tile size) whenever
+    // the layout settles after a rotation, a zoom or a resize.
+    document.querySelectorAll('[data-live-room]').forEach((wrapper) => {
         wrapper.dispatchEvent(new CustomEvent('edu:room-resize', {
             bubbles: true,
             detail: { next, previous },
@@ -461,7 +454,7 @@ function gesturesAllowed(target) {
 
     return !target.closest(
         'input, textarea, select, [contenteditable="true"], .modal, .offcanvas, ' +
-        '.table-responsive, .edu-scroll-x, .jitsi-frame, [data-no-swipe], [data-no-pull]'
+        '.table-responsive, .edu-scroll-x, .edu-live-grid, [data-no-swipe], [data-no-pull]'
     );
 }
 

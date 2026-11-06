@@ -325,10 +325,12 @@ class PhaseNineTest extends TestCase
         ]);
         $classRoom->students()->attach($student->id);
 
-        // The moderator starts unmuted (jitsi.js sets startWithAudioMuted=false).
+        // The moderator starts unmuted (resources/js/live-room.js reads the
+        // data-moderator="1" flag and leaves the microphone enabled).
         $this->actingAs($teacher)
             ->get(route('classes.room', $classRoom))
             ->assertOk()
+            ->assertSee('data-moderator="1"', false)
             ->assertSee('Your microphone starts on', false)
             ->assertDontSee('Your microphone starts muted', false);
 
@@ -336,6 +338,7 @@ class PhaseNineTest extends TestCase
         $this->actingAs($student)
             ->get(route('classes.room', $classRoom))
             ->assertOk()
+            ->assertSee('data-moderator="0"', false)
             ->assertSee('Your microphone starts muted', false)
             ->assertDontSee('Your microphone starts on', false);
     }

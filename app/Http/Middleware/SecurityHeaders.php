@@ -8,7 +8,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Baseline security headers for every web response (SRS 5.2).
- * The Jitsi room needs a different policy because it embeds meet.jit.si.
+ * The live room is our own page, so it only needs to allow the camera and the
+ * microphone on this origin; framing stays locked down everywhere.
  */
 class SecurityHeaders
 {
@@ -21,22 +22,17 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '0');
         $response->headers->remove('X-Powered-By');
 
-        $isJitsiRoom = $request->routeIs('classes.room');
-        $jitsiDomain = config('services.jitsi.domain', 'meet.jit.si');
+        // The room page and its own signaling API. Nothing is embedded from
+        // another origin any more, so the framing rules stay as they are.
+        $isLiveRoom = $request->routeIs('classes.room') || $request->routeIs('live.*');
 
-        if ($isJitsiRoom) {
-            // The video room is embedded from another origin, so the page must
-            // not forbid framing and must allow camera + microphone there.
-            $response->headers->remove('X-Frame-Options');
-            $response->headers->set(
-                'Content-Security-Policy',
-                "frame-src 'self' https://{$jitsiDomain};"
-            );
+        if ($isLiveRoom) {
+            // WebRTC needs the camera, the microphone and screen capture, but
+            // only on this origin: there is no external video server left.
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
             $response->headers->set(
                 'Permissions-Policy',
-                "camera=(self \"https://{$jitsiDomain}\"), ".
-                "microphone=(self \"https://{$jitsiDomain}\"), ".
-                "display-capture=(self \"https://{$jitsiDomain}\")"
+                'camera=(self), microphone=(self), display-capture=(self)'
             );
         } else {
             $response->headers->set('X-Frame-Options', 'SAMEORIGIN');

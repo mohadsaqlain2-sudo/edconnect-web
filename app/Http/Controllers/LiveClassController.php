@@ -9,8 +9,10 @@ use Illuminate\View\View;
 
 /**
  * The Join Class page (FR-18, FR-20, FR-22).
- * The page embeds Jitsi Meet through the External API inside an iframe, so the
- * chat, the mute buttons and screen sharing all come from Jitsi itself.
+ * The page hosts the application's own WebRTC room: the browser captures the
+ * camera and the microphone, and resources/js/live-room.js talks to our own
+ * signaling API (LiveRoomApiController) to connect the peers. No external
+ * video server is loaded.
  */
 class LiveClassController extends Controller
 {
@@ -44,27 +46,25 @@ class LiveClassController extends Controller
 
         return view('classes.room', [
             'classRoom' => $classRoom,
-            // Configurable through JITSI_DOMAIN / JITSI_SCRIPT_URL in .env,
-            // so the same page works against a self hosted Jitsi (FR-18).
-            'domain' => config('services.jitsi.domain'),
-            'scriptUrl' => config('services.jitsi.script_url'),
             'roomName' => $classRoom->room_name,
-            // Jitsi shows this name in the participant list: it is escaped in the
-            // view and JSON encoded for the JavaScript configuration.
+            // The name shown on my own tile: it is escaped in the view and
+            // travels in the data-* attributes the client reads.
             'displayName' => $user->name,
             'email' => $user->email,
-            // The class title is the Jitsi subject; the avatar travels with
-            // the participant so the room shows a face, not just a name.
             'subject' => $classRoom->title,
             'avatarUrl' => url($user->photoUrl()),
             'isModerator' => $isModerator,
+            // The ICE servers handed to RTCPeerConnection. Only a public STUN
+            // server is needed: peers inside one school network connect
+            // directly (config/live.php).
+            'iceServers' => [['urls' => config('live.stun')]],
         ]);
     }
 
     /**
-     * Landing spot after the user hangs up inside Jitsi (FR-20).
-     * Jitsi cannot write a Laravel session, so the redirect happens here and
-     * the normal "back" page receives the flash message.
+     * Landing spot after the user hangs up (FR-20).
+     * The live room is client side, so the redirect happens here and the
+     * normal "back" page receives the flash message.
      */
     public function leave(Request $request, ClassRoom $classRoom): RedirectResponse
     {
